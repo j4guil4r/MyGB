@@ -62,4 +62,6 @@ private:
 
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
     Word fetchWord(); // Lee 2 bytes (16-bits) en PC y hace PC+=2
+
+    void add(Byte value);
 };

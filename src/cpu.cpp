@@ -16,6 +16,25 @@ void CPU::step() {
             cycles += 4;
             break;
         // TODO: Los otros casos.
+        case 0x06:
+            B = fetchByte();
+            cycles += 8;
+            break;
+
+        case 0x3E:
+            A = fetchByte();
+            cycles += 8;
+            break;
+        case 0x80:
+            add(B);
+            cycles += 4;
+            break;
+        case 0xC3: {
+            Word targetAddress = fetchWord();
+            PC = targetAddress;
+            cycles += 16; // ~16/12 en documentacion
+        }
+            break;
         default:
             printf("Unhandled opcode: %02x\n", opcode);
             break;
@@ -41,4 +60,16 @@ Word CPU::fetchWord() {
     PC++;
     Word data = (data2 << 8) | data1;
     return data;
+}
+
+void CPU::add(Byte value) {
+    Word result = A + value;
+
+    // Flags
+    setFlag(F_Z, (result & 0xFF) == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, ((A & 0x0F) + (value & 0x0F)) > 0x0F);
+    setFlag(F_C, result > 0xFF);
+
+    A = static_cast<Byte>(result & 0xFF);
 }

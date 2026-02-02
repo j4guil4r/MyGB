@@ -6,4 +6,4 @@ using Byte = uint8_t;
 using Word = uint16_t;
 
 // 64KB de memoria
-constexpr Word MEMORY_SIZE = 64 * 1024;
+constexpr auto MEMORY_SIZE = 65536;
