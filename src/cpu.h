@@ -64,4 +64,14 @@ private:
     Word fetchWord(); // Lee 2 bytes (16-bits) en PC y hace PC+=2
 
     void add(Byte value);
+    void sub(Byte value);
+    void inc(Byte& reg);
+    void dec(Byte& reg);
+    void bit(int bitIndex, Byte regVal);
+    void rl(Byte& reg);
+    void cp(Byte value);
+    void sbc(Byte value);
+
+    void pushStack(Word value);
+    Word popStack();
 };
