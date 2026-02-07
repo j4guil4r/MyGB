@@ -1,55 +1,43 @@
 #pragma once
-#include <cstdint>
 #include <array>
-#include <string>
-#include <fstream>
 #include <vector>
+#include <string>
 #include <iostream>
+#include <fstream>
 #include "types.h"
 
 class Bus {
 public:
-    Bus(){memory.fill(0);}
+    Bus();
     ~Bus() = default;
 
-    Byte read(Word addr) const {
-        // TODO: redirigir al cartucho, vram, ...
-        if (addr < memory.size()) {
-            return memory[addr];
-        }
-        return 0;
-    }
+    Byte read(Word addr) const;
+    void write(Word addr, Byte data);
 
-    void write(Word addr, Byte data) {
-        if (addr < memory.size())
-            memory[addr] = data;
-    }
+    bool loadROM(const std::string& filename);
 
-    bool loadROM(const std::string& filename) {
-        std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    // --- MEMORIAS INTERNAS ---
 
-        if (!file.is_open()) {
-            std::cerr << "Error: No se pudo abrir el archivo " << filename << "\n";
-            return false;
-        }
+    // VRAM (8KB) - Gráficos (Tiles y Mapas)
+    // Rango: 8000 - 9FFF
+    std::array<Byte, 8 * 1024> vram;
 
-        std::streampos size = file.tellg();
-        // Apuntar al inicio del archivo
-        file.seekg(0, std::ios::beg);
+    // WRAM (8KB) - RAM de trabajo (Variables del juego)
+    // Rango: C000 - DFFF
+    std::array<Byte, 8 * 1024> wram;
 
-        std::cout << "Cargando ROM: " << filename << " | Size: " << size << " bytes\n";
+    // OAM (160 bytes) - Memoria de Sprites
+    // Rango: FE00 - FE9F (40 sprites * 4 bytes)
+    std::array<Byte, 160> oam;
 
-        // Validaciones básicas (La Boot ROM debe ser de 256 bytes)
-        if (size > MEMORY_SIZE) {
-            std::cerr << "Error: ROM demasiado grande para la memoria base.\n";
-            return false;
-        }
+    // HRAM (127 bytes) - High RAM (Variables ultra rápidas)
+    // Rango: FF80 - FFFE
+    std::array<Byte, 127> hram;
 
-        file.read(reinterpret_cast<char*>(memory.data()), size);
+    // El Cartucho (Tamaño dinámico)
+    std::vector<Byte> cartridgeMemory;
 
-        file.close();
-        return true;
-    }
-
-    std::array<Byte, MEMORY_SIZE> memory;
+    // Interrupt Enable Register (FFFF)
+    // Lo guardamos aparte porque es solo un byte muy importante
+    Byte ieRegister = 0;
 };

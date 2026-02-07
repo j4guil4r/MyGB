@@ -71,6 +71,17 @@ private:
     void rl(Byte& reg);
     void cp(Byte value);
     void sbc(Byte value);
+    void and_op(Byte value);
+    void or_op(Byte value);
+    void xor_op(Byte value);
+    void rr(Byte &reg);
+    void srl(Byte &reg);
+
+    void adc(Byte value);
+
+    void addHL(Word value);
+
+    void daa();
 
     void pushStack(Word value);
     Word popStack();

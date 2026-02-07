@@ -22,7 +22,7 @@ void CPU::step() {
             cycles += 12;
             break;
         case 0x05:
-            dec(B); // Helper que ya tenías
+            dec(B);
             cycles += 4;
             break;
 
@@ -31,11 +31,38 @@ void CPU::step() {
             setDE(fetchWord());
             cycles += 12;
             break;
+            // LD (DE), A (Opcode 12)
+        case 0x12:
+            bus.write(getDE(), A);
+            cycles += 8;
+            break;
             // INC DE (Opcode 13) - Incremento de 16 bits
             // Igual que INC HL (23), NO afecta flags.
         case 0x13:
             setDE(getDE() + 1);
             cycles += 8;
+            break;
+            // INC D (Opcode 14)
+        case 0x14:
+            inc(D);
+            cycles += 4;
+            break;
+
+            // INC E (Opcode 1C)
+        case 0x1C:
+            inc(E);
+            cycles += 4;
+            break;
+            // INC H (Opcode 24)
+        case 0x24:
+            inc(H);
+            cycles += 4;
+            break;
+
+            // INC L (Opcode 2C)
+        case 0x2C:
+            inc(L);
+            cycles += 4;
             break;
 
             // INC (HL) (Opcode 34) - Incremento de 8 bits en memoria
@@ -132,6 +159,12 @@ void CPU::step() {
             setHL(fetchWord());
             cycles += 12;
             break;
+            // LD A, (HL+) (Opcode 2A) - Lee de (HL) y luego incrementa HL
+        case 0x2A:
+            A = bus.read(getHL());
+            setHL(getHL() + 1);
+            cycles += 8;
+            break;
 
             // LD SP, d16 (Inicializar Stack Pointer)
         case 0x31:
@@ -211,6 +244,13 @@ void CPU::step() {
 
                     // BIT 7, H (0x7C) que ya tenías...
                 case 0x7C: bit(7, H); cycles += 8; break;
+                    // RR C (CB 19)
+                case 0x19: rr(C); cycles += 8; break;
+                    // RR D (CB 1A)
+                case 0x1A: rr(D); cycles += 8; break;
+
+                    // SRL B (CB 38)
+                case 0x38: srl(B); cycles += 8; break;
 
                 default:
                     std::cout << std::format("Unimplemented CB: {:02X}\n", cbOp);
@@ -369,6 +409,472 @@ void CPU::step() {
             cycles += 4;
         }
             break;
+            // PUSH HL (Opcode E5)
+        case 0xE5:
+            pushStack(getHL());
+            cycles += 16;
+            break;
+
+            // POP HL (Opcode E1)
+        case 0xE1:
+            setHL(popStack());
+            cycles += 12;
+            break;
+
+            // PUSH AF (Opcode F5)
+        case 0xF5:
+            pushStack(getAF());
+            cycles += 16;
+            break;
+
+            // POP AF (Opcode F1)
+        case 0xF1:
+        {
+            Word af = popStack();
+            // LA CORRECCIÓN MÁGICA:
+            // Aseguramos que los 4 bits bajos de F (la parte baja de AF) sean 0.
+            // 0xFFF0 = 1111 1111 1111 0000
+            setAF(af & 0xFFF0);
+            cycles += 12;
+        }
+            break;
+            // LD A, B (Opcode 78)
+        case 0x78: A = B; cycles += 4; break;
+
+            // LD A, H (Opcode 7C)
+        case 0x7C: A = H; cycles += 4; break;
+
+            // LD A, L (Opcode 7D)
+        case 0x7D: A = L; cycles += 4; break;
+            // AND d8 (Opcode E6) - AND Inmediato
+        case 0xE6:
+            and_op(fetchByte());
+            cycles += 8;
+            break;
+
+            // OR C (Opcode B1) - OR con registro C
+        case 0xB1:
+            or_op(C);
+            cycles += 4;
+            break;
+            // RET C (Opcode D8) - Retorna si Carry es true
+        case 0xD8:
+            if (getFlag(F_C)) {
+                PC = popStack();
+                cycles += 20; // Tarda más si salta
+            } else {
+                cycles += 8;
+            }
+            break;
+            // LD A, (a16) (Opcode FA)
+        case 0xFA:
+        {
+            Word addr = fetchWord();
+            A = bus.read(addr);
+            cycles += 16;
+        }
+            break;
+            // DI (Opcode F3) - Disable Interrupts
+        case 0xF3:
+            // TODO: ime = false;
+            cycles += 4;
+            break;
+
+            // INC BC (Opcode 03) - 16-bit Increment
+        case 0x03:
+            setBC(getBC() + 1);
+            cycles += 8;
+            break;
+
+            // CALL NZ, a16 (Opcode C4) - Llama si Z es 0
+        case 0xC4:
+        {
+            Word target = fetchWord();
+            if (!getFlag(F_Z)) {
+                pushStack(PC);
+                PC = target;
+                cycles += 24;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+
+            // CALL Z, a16 (Opcode CC) - Llama si Z es 1
+        case 0xCC:
+        {
+            Word target = fetchWord();
+            if (getFlag(F_Z)) {
+                pushStack(PC);
+                PC = target;
+                cycles += 24;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+
+            // CALL NC, a16 (Opcode D4) - Llama si C es 0
+        case 0xD4:
+        {
+            Word target = fetchWord();
+            if (!getFlag(F_C)) {
+                pushStack(PC);
+                PC = target;
+                cycles += 24;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+
+            // CALL C, a16 (Opcode DC) - Llama si C es 1
+        case 0xDC:
+        {
+            Word target = fetchWord();
+            if (getFlag(F_C)) {
+                pushStack(PC);
+                PC = target;
+                cycles += 24;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+            // RET NZ (Opcode C0) - Retorna si Z es 0
+        case 0xC0:
+            if (!getFlag(F_Z)) {
+                PC = popStack();
+                cycles += 20;
+            } else {
+                cycles += 8;
+            }
+            break;
+
+            // RET Z (Opcode C8) - Retorna si Z es 1
+        case 0xC8:
+            if (getFlag(F_Z)) {
+                PC = popStack();
+                cycles += 20;
+            } else {
+                cycles += 8;
+            }
+            break;
+
+            // RET NC (Opcode D0) - Retorna si C es 0
+        case 0xD0:
+            if (!getFlag(F_C)) {
+                PC = popStack();
+                cycles += 20;
+            } else {
+                cycles += 8;
+            }
+            break;
+            // DAA (Opcode 27) - Decimal Adjust Accumulator
+        case 0x27:
+            daa();
+            cycles += 4;
+            break;
+            // CPL (Opcode 2F) - Complement A (Flip bits)
+        case 0x2F:
+            A = ~A;
+            setFlag(F_N, true);
+            setFlag(F_H, true);
+            cycles += 4;
+            break;
+
+            // SCF (Opcode 37) - Set Carry Flag
+        case 0x37:
+            setFlag(F_N, false);
+            setFlag(F_H, false);
+            setFlag(F_C, true);
+            cycles += 4;
+            break;
+
+            // CCF (Opcode 3F) - Complement Carry Flag
+        case 0x3F:
+            setFlag(F_N, false);
+            setFlag(F_H, false);
+            setFlag(F_C, !getFlag(F_C)); // Invertimos C
+            cycles += 4;
+            break;
+            // XOR C (Opcode A9)
+        case 0xA9:
+            xor_op(C);
+            cycles += 4;
+            break;
+            // ADD A, d8 (Opcode C6)
+        case 0xC6:
+            add(fetchByte());
+            cycles += 8;
+            break;
+
+            // SUB d8 (Opcode D6)
+        case 0xD6:
+            sub(fetchByte());
+            cycles += 8;
+            break;
+            // OR A (Opcode B7)
+        case 0xB7:
+            or_op(A);
+            cycles += 4;
+            break;
+            // JP (HL) (Opcode E9) - PC = HL
+        case 0xE9:
+            PC = getHL();
+            cycles += 4;
+            break;
+            // RRA (Opcode 1F) - Rotate Right Accumulator
+        case 0x1F:
+            rr(A);
+            setFlag(F_Z, false); // ¡Regla especial de RRA! Z siempre 0
+            cycles += 4;
+            break;
+            // LD (a16), SP (Opcode 08) - Guarda el Stack Pointer en memoria
+        case 0x08:
+        {
+            Word addr = fetchWord();
+            // Game Boy es Little Endian: Primero byte bajo, luego alto
+            bus.write(addr, SP & 0xFF);
+            bus.write(addr + 1, (SP >> 8) & 0xFF);
+            cycles += 20;
+        }
+            break;
+
+            // PUSH DE (Opcode D5)
+        case 0xD5:
+            pushStack(getDE());
+            cycles += 16;
+            break;
+
+            // LD B, (HL) (Opcode 46)
+        case 0x46:
+            B = bus.read(getHL());
+            cycles += 8;
+            break;
+
+            // LD C, (HL) (Opcode 4E)
+        case 0x4E:
+            C = bus.read(getHL());
+            cycles += 8;
+            break;
+
+            // LD D, (HL) (Opcode 56)
+        case 0x56:
+            D = bus.read(getHL());
+            cycles += 8;
+            break;
+
+            // LD H, d8 (Opcode 26)
+        case 0x26:
+            H = fetchByte();
+            cycles += 8;
+            break;
+
+            // LD A, (BC) (Opcode 0A)
+        case 0x0A:
+            A = bus.read(getBC());
+            cycles += 8;
+            break;
+            // XOR (HL) (Opcode AE)
+        case 0xAE:
+            xor_op(bus.read(getHL()));
+            cycles += 8;
+            break;
+
+            // XOR d8 (Opcode EE)
+        case 0xEE:
+            xor_op(fetchByte());
+            cycles += 8;
+            break;
+
+            // DEC L (Opcode 2D)
+        case 0x2D:
+            dec(L);
+            cycles += 4;
+            break;
+
+            // ADD A, E (Opcode 83)
+        case 0x83:
+            add(E);
+            cycles += 4;
+            break;
+
+            // CP B (Opcode B8)
+        case 0xB8:
+            cp(B);
+            cycles += 4;
+            break;
+            // JR NC, r8 (Opcode 30) - Salto si No Carry
+        case 0x30:
+        {
+            int8_t offset = (int8_t)fetchByte();
+            if (!getFlag(F_C)) {
+                PC += offset;
+                cycles += 12;
+            } else {
+                cycles += 8;
+            }
+        }
+            break;
+            // LD E, A (Opcode 5F)
+        case 0x5F:
+            E = A;
+            cycles += 4;
+            break;
+
+            // LD A, C (Opcode 79)
+        case 0x79:
+            A = C;
+            cycles += 4;
+            break;
+
+            // LD A, D (Opcode 7A)
+        case 0x7A:
+            A = D;
+            cycles += 4;
+            break;
+            // DEC H (Opcode 25)
+        case 0x25:
+            dec(H);
+            cycles += 4;
+            break;
+            // LD (HL), B (Opcode 70)
+        case 0x70:
+            bus.write(getHL(), B);
+            cycles += 8;
+            break;
+
+            // LD (HL), C (Opcode 71)
+        case 0x71:
+            bus.write(getHL(), C);
+            cycles += 8;
+            break;
+
+            // LD (HL), D (Opcode 72)
+        case 0x72:
+            bus.write(getHL(), D);
+            cycles += 8;
+            break;
+            // POP DE (Opcode D1)
+        case 0xD1:
+            setDE(popStack());
+            cycles += 12;
+            break;
+            // ADC A, d8 (Opcode CE)
+        case 0xCE:
+            adc(fetchByte());
+            cycles += 8;
+            break;
+            // ADD HL, HL (Opcode 29)
+        case 0x29:
+            addHL(getHL());
+            cycles += 8;
+            break;
+
+            // DEC (HL) (Opcode 35)
+        case 0x35:
+        {
+            // Read-Modify-Write
+            Byte val = bus.read(getHL());
+            dec(val); // Helper que maneja flags Z, N, H
+            bus.write(getHL(), val);
+            cycles += 12;
+        }
+            break;
+
+            // OR (HL) (Opcode B6)
+        case 0xB6:
+            or_op(bus.read(getHL()));
+            cycles += 8;
+            break;
+
+            // LD L, (HL) (Opcode 6E)
+        case 0x6E:
+            L = bus.read(getHL());
+            cycles += 8;
+            break;
+
+            // LD L, A (Opcode 6F)
+        case 0x6F:
+            L = A;
+            cycles += 4;
+            break;
+
+            // DEC E (Opcode 1D)
+        case 0x1D:
+            dec(E);
+            cycles += 4;
+            break;
+            // INC A (Opcode 3C)
+        case 0x3C:
+            inc(A);
+            cycles += 4;
+            break;
+            // CP C (Opcode B9)
+        case 0xB9:
+            cp(C);
+            cycles += 4;
+            break;
+            // JP NZ, a16 (Opcode C2) - Salta a dirección absoluta si Z es 0
+        case 0xC2:
+        {
+            Word target = fetchWord(); // Leemos la dirección de 16 bits
+            if (!getFlag(F_Z)) {
+                PC = target;       // Salto absoluto
+                cycles += 16;      // Tarda más si salta
+            } else {
+                cycles += 12;      // Tarda menos si no salta
+            }
+        }
+            break;
+            // CP E (Opcode BB)
+        case 0xBB:
+            cp(E);
+            cycles += 4;
+            break;
+            // LD A, (HL) (Opcode 7E)
+        case 0x7E:
+            A = bus.read(getHL());
+            cycles += 8;
+            break;
+
+            // JR C, r8 (Opcode 38) - Salto si Carry es 1
+        case 0x38:
+        {
+            int8_t offset = (int8_t)fetchByte();
+            if (getFlag(F_C)) {
+                PC += offset;
+                cycles += 12;
+            } else {
+                cycles += 8;
+            }
+        }
+            break;
+
+            // DEC BC (Opcode 0B)
+        case 0x0B:
+            setBC(getBC() - 1);
+            cycles += 8;
+            break;
+            // SUB C (Opcode 91)
+        case 0x91:
+            sub(C);
+            cycles += 4;
+            break;
+
+            // ADD A, C (Opcode 81)
+        case 0x81:
+            add(C);
+            cycles += 4;
+            break;
+
+            // CP D (Opcode BA)
+        case 0xBA:
+            cp(D);
+            cycles += 4;
+            break;
+
         default:
             printf("Unhandled opcode: %02x\n", opcode);
             break;
@@ -543,4 +1049,130 @@ void CPU::sbc(Byte value) {
     setFlag(F_N, true);
 
     A = static_cast<Byte>(result & 0xFF);
+}
+
+void CPU::and_op(Byte value) {
+    A &= value;
+    setFlag(F_Z, A == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, true);  // H = 1
+    setFlag(F_C, false);
+}
+
+void CPU::or_op(Byte value) {
+    A |= value;
+    setFlag(F_Z, A == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, false);
+}
+
+void CPU::daa() {
+    int correction = 0;
+
+    // Si el flag H está encendido O los 4 bits bajos son mayores a 9
+    // Significa que hubo desborde en los decimales bajos
+    if (getFlag(F_H) || (!getFlag(F_N) && (A & 0x0F) > 9)) {
+        correction |= 0x06;
+    }
+
+    // Si el flag C está encendido O el valor total es mayor a 99 (en hex)
+    // Significa que hubo desborde en los decimales altos
+    if (getFlag(F_C) || (!getFlag(F_N) && A > 0x99)) {
+        correction |= 0x60;
+        setFlag(F_C, true); // DAA enciende el Carry si corregimos la parte alta
+    }
+
+    // Aplicamos la corrección (Sumar o Restar dependiendo del Flag N)
+    if (getFlag(F_N)) {
+        A -= correction;
+    } else {
+        A += correction;
+    }
+
+    // Flags finales
+    setFlag(F_Z, A == 0);
+    setFlag(F_H, false); // DAA siempre apaga H
+    // El Flag N no se toca
+    // El Flag C se actualizó arriba
+}
+
+void CPU::xor_op(Byte value) {
+    A ^= value;
+
+    // Flags
+    setFlag(F_Z, A == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, false);
+}
+
+// Rotate Right
+void CPU::rr(Byte& reg) {
+    // 1. Guardamos el bit 0 (que caerá al Carry)
+    bool isCarry = (reg & 0x01) != 0;
+
+    // 2. Recuperamos el Carry viejo (que entrará por la izquierda, bit 7)
+    bool oldCarry = getFlag(F_C);
+
+    // 3. Rotamos: Metemos oldCarry en bit 7 y desplazamos
+    reg = (reg >> 1) | (oldCarry ? 0x80 : 0x00);
+
+    // 4. Flags
+    setFlag(F_Z, reg == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, isCarry);
+}
+
+// Shift right logical
+void CPU::srl(Byte& reg) {
+    // 1. Guardamos el bit 0 (que caerá al Carry)
+    bool isCarry = (reg & 0x01) != 0;
+
+    // 2. Desplazamos (automáticamente entra 0 por la izquierda al ser unsigned)
+    reg >>= 1;
+
+    // 3. Flags
+    setFlag(F_Z, reg == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, isCarry);
+}
+
+void CPU::adc(Byte value) {
+    // 1. Obtenemos el Carry actual (0 o 1)
+    Byte carry = getFlag(F_C) ? 1 : 0;
+
+    // 2. Calculamos resultado completo (int para ver desbordes)
+    int result = A + value + carry;
+
+    // 3. Flags
+    setFlag(F_Z, (result & 0xFF) == 0);
+    setFlag(F_N, false);
+
+    // H Flag: Se enciende si la suma de los nibbles bajos + carry supera 15 (0xF)
+    setFlag(F_H, ((A & 0x0F) + (value & 0x0F) + carry) > 0x0F);
+
+    // C Flag: Se enciende si el resultado total no cabe en 8 bits
+    setFlag(F_C, result > 0xFF);
+
+    A = static_cast<Byte>(result & 0xFF);
+}
+
+void CPU::addHL(Word value) {
+    Word hl = getHL();
+    int result = hl + value;
+
+    // N Flag: Siempre 0
+    setFlag(F_N, false);
+
+    // H Flag: Desborde desde el bit 11
+    // ((hl & 0xFFF) + (val & 0xFFF)) > 0xFFF
+    setFlag(F_H, (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF);
+
+    // C Flag: Desborde desde el bit 15 (mayor a 65535)
+    setFlag(F_C, result > 0xFFFF);
+
+    setHL(static_cast<Word>(result & 0xFFFF));
 }
