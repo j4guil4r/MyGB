@@ -38,6 +38,25 @@ public:
     std::vector<Byte> cartridgeMemory;
 
     // Interrupt Enable Register (FFFF)
-    // Lo guardamos aparte porque es solo un byte muy importante
     Byte ieRegister = 0;
+    Byte ifRegister = 0; // 0xFF0F - Interrupt Flag
+
+    // --- TIMERS ---
+    Byte div = 0;   // 0xFF04 - Divider Register (Incrementa siempre)
+    Byte tima = 0;  // 0xFF05 - Timer Counter (El que dispara la interrupción)
+    Byte tma = 0;   // 0xFF06 - Timer Modulo (Valor de recarga)
+    Byte tac = 0;   // 0xFF07 - Timer Control (Velocidad y On/Off)
+
+    // Contadores internos para gestionar la frecuencia
+    // La GB corre a 4194304 Hz.
+    int divCounter = 0;   // Acumulador para el registro DIV
+    int timerCounter = 0; // Acumulador para el registro TIMA
+
+    void updateTimers(int cycles);
+
+    // Lo usaremos para que el Timer le diga a la CPU "¡Oye!"
+    void requestInterrupt(int bit);
+
+    Byte ly = 0; // 0xFF44 - LCD Y Coordinate
+    int ppuCounter = 0; // Para simular el dibujo de líneas
 };

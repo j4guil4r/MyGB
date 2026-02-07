@@ -20,7 +20,7 @@ int main () {
     cpu.SP = 0xFFFE;
     cpu.PC = 0x0100; // Inicio del juego
 
-    if (!gbBus.loadROM("01-special.gb")) {
+    if (!gbBus.loadROM("02-interrupts.gb")) {
         return -1; // Salir si falla
     }
 
@@ -28,16 +28,13 @@ int main () {
 
     // Loop de ejecución
     while (true) {
-        // Logueamos antes de ejecutar para ver qué va a hacer
-        // Nota: Si imprimes en cada ciclo, la consola será LENTÍSIMA.
-        // Usa getchar() para ir paso a paso si quieres ver detalle.
-
-        // std::cout << std::format("PC:{:04X} OP:{:02X}\n", cpu.PC, gbBus.read(cpu.PC));
-
+        int ciclosBefore = cpu.getCycles();
         cpu.step();
-        //if (!(cpu.PC % 10))
-        //    std::cout << std::hex << cpu.PC << std::endl;
+        int cyclesAfter = cpu.getCycles();
+        int deltaCycles = cyclesAfter - ciclosBefore;
 
+        gbBus.updateTimers(deltaCycles);
+        cpu.handleInterrupts();
     }
     return 0;
 }

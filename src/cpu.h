@@ -12,6 +12,8 @@ public:
     void step();
     void reset();
 
+    long long getCycles () {return cycles;};
+
     // Registros:
     // TODO: idealmente deben de ser privados.
     Byte A = 0x00; // Acumulador
@@ -53,12 +55,15 @@ public:
         if (v) F |= f;
         else   F &= ~f;
     }
+    void handleInterrupts();
 private:
     Bus& bus;
 
     // Ciclos que demora
     // Nota: El procesador es Multi-cycle.
-    uint8_t cycles = 0;
+    long long cycles = 0;
+    bool ime = false; // Interrupt Master Enable
+    bool isHalted = false;
 
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
     Word fetchWord(); // Lee 2 bytes (16-bits) en PC y hace PC+=2
@@ -76,11 +81,8 @@ private:
     void xor_op(Byte value);
     void rr(Byte &reg);
     void srl(Byte &reg);
-
     void adc(Byte value);
-
     void addHL(Word value);
-
     void daa();
 
     void pushStack(Word value);

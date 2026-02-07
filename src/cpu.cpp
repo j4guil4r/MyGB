@@ -7,6 +7,13 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
 }
 
 void CPU::step() {
+    // 0. Halt?
+    if (isHalted) {
+        // Si estamos en HALT, la CPU no hace nada, pero el reloj sigue corriendo.
+        // Consumimos 4 ciclos (1 ciclo de máquina) por "paso" de espera.
+        cycles += 4;
+        return; // No ejecutamos fetch/decode
+    }
     // 1. Fetch
     Byte opcode = fetchByte();
 
@@ -201,7 +208,7 @@ void CPU::step() {
             // EI (Enable Interrupts) - 0xFB
             // Por ahora no tenemos interrupciones, pero la BIOS lo pide.
         case 0xFB:
-            // TODO: masterInterruptEnable = true;
+            ime = true;
             cycles += 4;
             break;
             // RLA (Opcode 17) - Rotate Left Accumulator
@@ -476,7 +483,7 @@ void CPU::step() {
             break;
             // DI (Opcode F3) - Disable Interrupts
         case 0xF3:
-            // TODO: ime = false;
+            ime = false;
             cycles += 4;
             break;
 
@@ -874,6 +881,90 @@ void CPU::step() {
             cp(D);
             cycles += 4;
             break;
+            // LD HL, SP+r8 (Opcode F8)
+        case 0xF8:
+        {
+            // Leemos el desplazamiento con signo (-128 a 127)
+            int8_t offset = (int8_t)fetchByte();
+
+            // Calculamos el resultado final
+            int result = SP + offset;
+
+            // Flags
+            setFlag(F_Z, false); // Z siempre 0 en esta instrucción
+            setFlag(F_N, false); // N siempre 0
+
+            // Flag H: Acarreo del bit 3 (como si sumáramos solo bytes)
+            // ((SP & 0x0F) + (offset & 0x0F)) > 0x0F
+            setFlag(F_H, ((SP & 0x0F) + (offset & 0x0F)) > 0x0F);
+
+            // Flag C: Acarreo del bit 7 (overflow del byte bajo)
+            // ((SP & 0xFF) + (offset & 0xFF)) > 0xFF
+            setFlag(F_C, ((SP & 0xFF) + (offset & 0xFF)) > 0xFF);
+
+            setHL((Word)result);
+            cycles += 12;
+        }
+            break;
+            // JP Z, a16 (Opcode CA) - Salta si Z es 1
+        case 0xCA:
+        {
+            Word target = fetchWord();
+            if (getFlag(F_Z)) {
+                PC = target;
+                cycles += 16;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+
+            // JP NC, a16 (Opcode D2) - Salta si C es 0
+        case 0xD2:
+        {
+            Word target = fetchWord();
+            if (!getFlag(F_C)) {
+                PC = target;
+                cycles += 16;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+
+            // JP C, a16 (Opcode DA) - Salta si C es 1
+        case 0xDA:
+        {
+            Word target = fetchWord();
+            if (getFlag(F_C)) {
+                PC = target;
+                cycles += 16;
+            } else {
+                cycles += 12;
+            }
+        }
+            break;
+            // HALT (Opcode 76) - Pausa la CPU hasta una interrupción
+            // HALT (Opcode 76)
+        case 0x76:
+        {
+            // Leemos IE e IF para ver si ya hay una interrupción pendiente
+            Byte IE = bus.read(0xFFFF);
+            Byte IF = bus.read(0xFF0F);
+
+            // Si hay una interrupción pendiente (y habilitada en IE),
+            // HALT no surte efecto (bug del hardware, o simplemente no se duerme).
+            if ((IE & IF & 0x1F) != 0) {
+                // HALT Bug: En hardware real, esto causa que la siguiente
+                // instrucción se lea dos veces. Para emulación simple,
+                // basta con NO activar isHalted.
+            } else {
+                // Si no hay nada pendiente, a dormir.
+                isHalted = true;
+            }
+        }
+            cycles += 4;
+            break;
 
         default:
             printf("Unhandled opcode: %02x\n", opcode);
@@ -1175,4 +1266,61 @@ void CPU::addHL(Word value) {
     setFlag(F_C, result > 0xFFFF);
 
     setHL(static_cast<Word>(result & 0xFFFF));
+}
+
+void CPU::handleInterrupts() {
+    // Leemos IE (Enabled) e IF (Request) desde el Bus
+    Byte IE = bus.read(0xFFFF);
+    Byte IF = bus.read(0xFF0F);
+
+    if ((IE & IF & 0x1F) != 0) {
+        // Esto pasa siempre, tenga IME on u off
+        isHalted = false;
+    }
+
+    // Si las interrupciones están apagadas, no hacemos nada
+    if (!ime) return;
+
+    // Miramos si hay alguna interrupción activa QUE ADEMÁS esté habilitada
+    // (Ej: Si VBlank (bit 0) está en 1 en ambos registros)
+    if (IE & IF & 0x1F) { // 0x1F son los 5 bits de interrupciones válidos
+        ime = false; // Desactivamos interrupciones anidadas automáticamente
+
+        // Consumimos 5 ciclos de reloj (la CPU tarda en reaccionar)
+
+        // Identificamos cual fue (VBlank es la más prioritaria, bit 0)
+        Byte interruptMask = IE & IF;
+
+        Word vector = 0x0000;
+
+        // Bit 0: VBlank (INT 40h)
+        if (interruptMask & 0x01) {
+            bus.write(0xFF0F, IF & ~0x01); // Limpiamos el flag (ack)
+            vector = 0x0040;
+        }
+        // Bit 1: LCD STAT (INT 48h)
+        else if (interruptMask & 0x02) {
+            bus.write(0xFF0F, IF & ~0x02);
+            vector = 0x0048;
+        }
+        // Bit 2: Timer (INT 50h)
+        else if (interruptMask & 0x04) {
+            bus.write(0xFF0F, IF & ~0x04);
+            vector = 0x0050;
+        }
+        // Bit 3: Serial (INT 58h)
+        else if (interruptMask & 0x08) {
+            bus.write(0xFF0F, IF & ~0x08);
+            vector = 0x0058;
+        }
+        // Bit 4: Joypad (INT 60h)
+        else if (interruptMask & 0x10) {
+            bus.write(0xFF0F, IF & ~0x10);
+            vector = 0x0060;
+        }
+
+        // Saltar
+        pushStack(PC);
+        PC = vector;
+    }
 }
