@@ -10,6 +10,7 @@ public:
 
     // Core
     void step();
+    void step_OLD();
     void reset();
 
     long long getCycles () {return cycles;};
@@ -104,25 +105,44 @@ private:
     // Lookup Table
     std::vector<Instruction> instructions;
 
-    // 4. Instrucciones específicas (Aquí irás añadiendo las 256...)
-    //    Las agrupamos por funcionalidad para orden.
+    void OP_UNKNOWN();
 
-    void OP_UNKNOWN(); // Para opcodes no implementados
-    void OP_NOP();     // 0x00
+    // --- Opcodes 0x00 a 0x0F ---
+    void OP_NOP();          // 0x00
+    void OP_LD_BC_d16();    // 0x01
+    void OP_LD_BC_A();      // 0x02
+    void OP_INC_BC();       // 0x03
+    void OP_INC_B();        // 0x04
+    void OP_DEC_B();        // 0x05
+    void OP_LD_B_d8();      // 0x06
+    void OP_RLCA();         // 0x07
+    void OP_LD_a16_SP();    // 0x08
+    void OP_ADD_HL_BC();    // 0x09
+    void OP_LD_A_BC();      // 0x0A
+    void OP_DEC_BC();       // 0x0B
+    void OP_INC_C();        // 0x0C
+    void OP_DEC_C();        // 0x0D
+    void OP_LD_C_d8();      // 0x0E
+    void OP_RRCA();         // 0x0F
 
-    // Cargas (Load)
-    void OP_LD_BC_d16(); // 0x01
-    void OP_LD_BC_A();   // 0x02
-    void OP_LD_B_d8();   // 0x06
-    void OP_LD_a16_SP(); // 0x08
+    // --- Opcodes 0x10 a 0x1F ---
+    void OP_STOP();         // 0x10
+    void OP_LD_DE_d16();    // 0x11
+    void OP_LD_DE_A();      // 0x12
+    void OP_INC_DE();       // 0x13
+    void OP_INC_D();        // 0x14
+    void OP_DEC_D();        // 0x15
+    void OP_LD_D_d8();      // 0x16
+    void OP_RLA();          // 0x17
+    void OP_JR_r8();        // 0x18
+    void OP_ADD_HL_DE();    // 0x19
+    void OP_LD_A_DE();      // 0x1A
+    void OP_DEC_DE();       // 0x1B
+    void OP_INC_E();        // 0x1C
+    void OP_DEC_E();        // 0x1D
+    void OP_LD_E_d8();      // 0x1E
+    void OP_RRA();          // 0x1F
 
-    // ... etc ...
 
-    // Aritmética
-    void OP_ADD_A_B();   // 0x80
-    void OP_ADD_A_C();   // 0x81
-    // ... etc ...
-
-    // Prefijo CB
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
 };

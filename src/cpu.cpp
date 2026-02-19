@@ -4,9 +4,67 @@
 #include "cpu.h"
 
 CPU::CPU(Bus& busReference) : bus(busReference) {
+    instructions.resize(256);
+
+    for (int i = 0; i < 256; i++) instructions[i] = { "UNKNOWN", &CPU::OP_UNKNOWN, 0 };
+
+    // =============== BLOQUE DE FUNCIONES ==================//
+
+    // --- Fila 0x00 ---
+    instructions[0x00] = { "NOP",          &CPU::OP_NOP,        4  };
+    instructions[0x01] = { "LD BC, d16",   &CPU::OP_LD_BC_d16,  12 };
+    instructions[0x02] = { "LD (BC), A",   &CPU::OP_LD_BC_A,    8  };
+    instructions[0x03] = { "INC BC",       &CPU::OP_INC_BC,     8  };
+    instructions[0x04] = { "INC B",        &CPU::OP_INC_B,      4  };
+    instructions[0x05] = { "DEC B",        &CPU::OP_DEC_B,      4  };
+    instructions[0x06] = { "LD B, d8",     &CPU::OP_LD_B_d8,    8  };
+    instructions[0x07] = { "RLCA",         &CPU::OP_RLCA,       4  };
+    instructions[0x08] = { "LD (a16), SP", &CPU::OP_LD_a16_SP,  20 };
+    instructions[0x09] = { "ADD HL, BC",   &CPU::OP_ADD_HL_BC,  8  };
+    instructions[0x0A] = { "LD A, (BC)",   &CPU::OP_LD_A_BC,    8  };
+    instructions[0x0B] = { "DEC BC",       &CPU::OP_DEC_BC,     8  };
+    instructions[0x0C] = { "INC C",        &CPU::OP_INC_C,      4  };
+    instructions[0x0D] = { "DEC C",        &CPU::OP_DEC_C,      4  };
+    instructions[0x0E] = { "LD C, d8",     &CPU::OP_LD_C_d8,    8  };
+    instructions[0x0F] = { "RRCA",         &CPU::OP_RRCA,       4  };
+
+    // --- Fila 0x10 ---
+    instructions[0x10] = { "STOP",         &CPU::OP_STOP,       4  };
+    instructions[0x11] = { "LD DE, d16",   &CPU::OP_LD_DE_d16,  12 };
+    instructions[0x12] = { "LD (DE), A",   &CPU::OP_LD_DE_A,    8  };
+    instructions[0x13] = { "INC DE",       &CPU::OP_INC_DE,     8  };
+    instructions[0x14] = { "INC D",        &CPU::OP_INC_D,      4  };
+    instructions[0x15] = { "DEC D",        &CPU::OP_DEC_D,      4  };
+    instructions[0x16] = { "LD D, d8",     &CPU::OP_LD_D_d8,    8  };
+    instructions[0x17] = { "RLA",          &CPU::OP_RLA,        4  };
+    instructions[0x18] = { "JR r8",        &CPU::OP_JR_r8,      12 };
+    instructions[0x19] = { "ADD HL, DE",   &CPU::OP_ADD_HL_DE,  8  };
+    instructions[0x1A] = { "LD A, (DE)",   &CPU::OP_LD_A_DE,    8  };
+    instructions[0x1B] = { "DEC DE",       &CPU::OP_DEC_DE,     8  };
+    instructions[0x1C] = { "INC E",        &CPU::OP_INC_E,      4  };
+    instructions[0x1D] = { "DEC E",        &CPU::OP_DEC_E,      4  };
+    instructions[0x1E] = { "LD E, d8",     &CPU::OP_LD_E_d8,    8  };
+    instructions[0x1F] = { "RRA",          &CPU::OP_RRA,        4  };
+
+
 }
 
 void CPU::step() {
+    if (isHalted) {
+        cycles += 4;
+        return;
+    }
+
+    // Fetch
+    Byte opcode = fetchByte();
+
+    // Decode & Execute
+    Instruction inst = instructions[opcode];
+    cycles += inst.cycles;
+    (this->*inst.operate)();
+}
+
+void CPU::step_OLD() {
     // 0. Halt?
     if (isHalted) {
         // Si estamos en HALT, la CPU no hace nada, pero el reloj sigue corriendo.
@@ -1324,3 +1382,50 @@ void CPU::handleInterrupts() {
         PC = vector;
     }
 }
+
+// ========= Nueva tabla ========= //
+
+void CPU::OP_UNKNOWN() {
+    PC--;
+    step_OLD();
+}
+
+// =========================================================
+// Opcodes 0x00 - 0x0F
+// =========================================================
+void CPU::OP_NOP() {}
+void CPU::OP_LD_BC_d16() { /* TODO */ }
+void CPU::OP_LD_BC_A()   { /* TODO */ }
+void CPU::OP_INC_BC()    { /* TODO */ }
+void CPU::OP_INC_B()     { /* TODO */ }
+void CPU::OP_DEC_B()     { /* TODO */ }
+void CPU::OP_LD_B_d8()   { /* TODO */ }
+void CPU::OP_RLCA()      { /* TODO */ }
+void CPU::OP_LD_a16_SP() { /* TODO */ }
+void CPU::OP_ADD_HL_BC() { /* TODO */ }
+void CPU::OP_LD_A_BC()   { /* TODO */ }
+void CPU::OP_DEC_BC()    { /* TODO */ }
+void CPU::OP_INC_C()     { /* TODO */ }
+void CPU::OP_DEC_C()     { /* TODO */ }
+void CPU::OP_LD_C_d8()   { /* TODO */ }
+void CPU::OP_RRCA()      { /* TODO */ }
+
+// =========================================================
+// Opcodes 0x10 - 0x1F
+// =========================================================
+void CPU::OP_STOP()      { /* TODO */ }
+void CPU::OP_LD_DE_d16() { /* TODO */ }
+void CPU::OP_LD_DE_A()   { /* TODO */ }
+void CPU::OP_INC_DE()    { /* TODO */ }
+void CPU::OP_INC_D()     { /* TODO */ }
+void CPU::OP_DEC_D()     { /* TODO */ }
+void CPU::OP_LD_D_d8()   { /* TODO */ }
+void CPU::OP_RLA()       { /* TODO */ }
+void CPU::OP_JR_r8()     { /* TODO */ }
+void CPU::OP_ADD_HL_DE() { /* TODO */ }
+void CPU::OP_LD_A_DE()   { /* TODO */ }
+void CPU::OP_DEC_DE()    { /* TODO */ }
+void CPU::OP_INC_E()     { /* TODO */ }
+void CPU::OP_DEC_E()     { /* TODO */ }
+void CPU::OP_LD_E_d8()   { /* TODO */ }
+void CPU::OP_RRA()       { /* TODO */ }
