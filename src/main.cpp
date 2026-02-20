@@ -28,10 +28,10 @@ int main () {
 
     // Loop de ejecución
     while (true) {
-        int ciclosBefore = cpu.getCycles();
+        long long cyclesBefore = cpu.getCycles();
         cpu.step();
-        int cyclesAfter = cpu.getCycles();
-        int deltaCycles = cyclesAfter - ciclosBefore;
+        long long cyclesAfter = cpu.getCycles();
+        long long deltaCycles = cyclesAfter - cyclesBefore;
 
         gbBus.updateTimers(deltaCycles);
         cpu.handleInterrupts();

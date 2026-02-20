@@ -64,12 +64,12 @@ Byte Bus::read(Word addr) const {
         return 0;
     }
 
-    // 8. IO REGISTERS (FF00 - FF7F) -> ¡AQUÍ ESTÁ LA CLAVE!
+    // 8. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
         // Interrupciones
         if (addr == 0xFF0F) return ifRegister;
 
-        // Timers (¡ESTO ES LO QUE TE FALTABA!)
+        // Timers
         if (addr == 0xFF04) return div;
         if (addr == 0xFF05) return tima;
         if (addr == 0xFF06) return tma;
@@ -122,7 +122,7 @@ void Bus::write(Word addr, Byte data) {
             std::cout << (char)data;
         }
 
-        // Timers (¡CRUCIAL!)
+        // Timers
         else if (addr == 0xFF04) { div = 0; divCounter = 0; } // DIV se resetea al escribir
         else if (addr == 0xFF05) tima = data;
         else if (addr == 0xFF06) tma = data;
@@ -154,7 +154,7 @@ void Bus::requestInterrupt(int bit) {
     ifRegister |= (1 << bit);
 }
 
-void Bus::updateTimers(int cycles) {
+void Bus::updateTimers(const long long cycles) {
     // 1. DIV (Divider Register)
     // Incrementa siempre, a una velocidad de 16384 Hz.
     // La CPU va a 4194304 Hz. 4194304 / 16384 = 256 ciclos de CPU por cada tick de DIV.

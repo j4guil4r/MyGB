@@ -46,6 +46,42 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     instructions[0x1E] = { "LD E, d8",     &CPU::OP_LD_E_d8,    8  };
     instructions[0x1F] = { "RRA",          &CPU::OP_RRA,        4  };
 
+    // --- Fila 0x20 ---
+    instructions[0x20] = { "JR NZ, r8",    &CPU::OP_JR_NZ_r8,   8  }; // +4 si salta
+    instructions[0x21] = { "LD HL, d16",   &CPU::OP_LD_HL_d16,  12 };
+    instructions[0x22] = { "LD (HL+), A",  &CPU::OP_LDI_HL_A,   8  };
+    instructions[0x23] = { "INC HL",       &CPU::OP_INC_HL,     8  };
+    instructions[0x24] = { "INC H",        &CPU::OP_INC_H,      4  };
+    instructions[0x25] = { "DEC H",        &CPU::OP_DEC_H,      4  };
+    instructions[0x26] = { "LD H, d8",     &CPU::OP_LD_H_d8,    8  };
+    instructions[0x27] = { "DAA",          &CPU::OP_DAA,        4  };
+    instructions[0x28] = { "JR Z, r8",     &CPU::OP_JR_Z_r8,    8  }; // +4 si salta
+    instructions[0x29] = { "ADD HL, HL",   &CPU::OP_ADD_HL_HL,  8  };
+    instructions[0x2A] = { "LD A, (HL+)",  &CPU::OP_LDI_A_HL,   8  };
+    instructions[0x2B] = { "DEC HL",       &CPU::OP_DEC_HL,     8  };
+    instructions[0x2C] = { "INC L",        &CPU::OP_INC_L,      4  };
+    instructions[0x2D] = { "DEC L",        &CPU::OP_DEC_L,      4  };
+    instructions[0x2E] = { "LD L, d8",     &CPU::OP_LD_L_d8,    8  };
+    instructions[0x2F] = { "CPL",          &CPU::OP_CPL,        4  };
+
+    // --- Fila 0x30 ---
+    instructions[0x30] = { "JR NC, r8",    &CPU::OP_JR_NC_r8,   8  }; // +4 si salta
+    instructions[0x31] = { "LD SP, d16",   &CPU::OP_LD_SP_d16,  12 };
+    instructions[0x32] = { "LD (HL-), A",  &CPU::OP_LDD_HL_A,   8  };
+    instructions[0x33] = { "INC SP",       &CPU::OP_INC_SP,     8  };
+    instructions[0x34] = { "INC (HL)",     &CPU::OP_INC_aHL,    12 };
+    instructions[0x35] = { "DEC (HL)",     &CPU::OP_DEC_aHL,    12 };
+    instructions[0x36] = { "LD (HL), d8",  &CPU::OP_LD_aHL_d8,  12 };
+    instructions[0x37] = { "SCF",          &CPU::OP_SCF,        4  };
+    instructions[0x38] = { "JR C, r8",     &CPU::OP_JR_C_r8,    8  }; // +4 si salta
+    instructions[0x39] = { "ADD HL, SP",   &CPU::OP_ADD_HL_SP,  8  };
+    instructions[0x3A] = { "LD A, (HL-)",  &CPU::OP_LDD_A_HL,   8  };
+    instructions[0x3B] = { "DEC SP",       &CPU::OP_DEC_SP,     8  };
+    instructions[0x3C] = { "INC A",        &CPU::OP_INC_A,      4  };
+    instructions[0x3D] = { "DEC A",        &CPU::OP_DEC_A,      4  };
+    instructions[0x3E] = { "LD A, d8",     &CPU::OP_LD_A_d8,    8  };
+    instructions[0x3F] = { "CCF",          &CPU::OP_CCF,        4  };
+
 
 }
 
@@ -1472,4 +1508,108 @@ void CPU::OP_LD_E_d8()   { E = fetchByte(); }
 void CPU::OP_RRA()       {
     rr(A);
     setFlag(F_Z, false);
+}
+
+// =========================================================
+// Opcodes 0x20 - 0x2F
+// =========================================================
+void CPU::OP_JR_NZ_r8()  {
+    const auto offset = static_cast<int8_t>(fetchByte());
+
+    if (!getFlag(F_Z)) {
+        PC += offset;
+        cycles += 4;
+    }
+}
+void CPU::OP_LD_HL_d16() { setHL(fetchWord()); }
+void CPU::OP_LDI_HL_A() {
+    bus.write(getHL(), A);
+    setHL(getHL() + 1);
+}
+void CPU::OP_INC_HL()    { setHL(getHL() + 1); }
+void CPU::OP_INC_H()     { inc(H); }
+void CPU::OP_DEC_H()     { dec(H); }
+void CPU::OP_LD_H_d8()   { H = fetchByte(); }
+void CPU::OP_DAA()       { daa(); }
+void CPU::OP_JR_Z_r8() {
+    const auto offset = static_cast<int8_t>(fetchByte());
+
+    if (getFlag(F_Z)) {
+        PC += offset;
+        cycles += 4;
+    }
+}
+void CPU::OP_ADD_HL_HL() { addHL(getHL()); }
+void CPU::OP_LDI_A_HL()  {
+    A = bus.read(getHL());
+    setHL(getHL() + 1); // HL++
+}
+void CPU::OP_DEC_HL()    { setHL(getHL() - 1); }
+void CPU::OP_INC_L()     { inc(L);}
+void CPU::OP_DEC_L()     { dec(L); }
+void CPU::OP_LD_L_d8()   { L = fetchByte(); }
+void CPU::OP_CPL() {
+    A = ~A; // Complement
+    setFlag(F_N, true);
+    setFlag(F_H, true);
+}
+
+// =========================================================
+// Opcodes 0x30 - 0x3F
+// =========================================================
+void CPU::OP_JR_NC_r8() {
+    const auto offset = static_cast<int8_t>(fetchByte());
+
+    if (!getFlag(F_C)) {
+        PC += offset;
+        cycles += 4;
+    }
+}
+void CPU::OP_LD_SP_d16() { SP = fetchWord(); }
+void CPU::OP_LDD_HL_A() {
+    bus.write(getHL(), A);
+    setHL(getHL() - 1);
+}
+void CPU::OP_INC_SP()    { SP++; }
+void CPU::OP_INC_aHL() {
+    Byte val = bus.read(getHL());
+    inc(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_DEC_aHL() {
+    Byte val = bus.read(getHL());
+    dec(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_LD_aHL_d8() {
+    const Byte val = fetchByte();
+    bus.write(getHL(), val);
+}
+void CPU::OP_SCF() {
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, true);
+    // Z no cambia
+}
+void CPU::OP_JR_C_r8() {
+    const auto offset = static_cast<int8_t>(fetchByte());
+
+    if (getFlag(F_C)) {
+        PC += offset;
+        cycles += 4;
+    }
+}
+void CPU::OP_ADD_HL_SP() { addHL(SP); }
+void CPU::OP_LDD_A_HL() {
+    A = bus.read(getHL());
+    setHL(getHL() - 1);
+}
+void CPU::OP_DEC_SP()    { SP--; }
+void CPU::OP_INC_A()     { inc(A); }
+void CPU::OP_DEC_A()     { dec(A); }
+void CPU::OP_LD_A_d8()   { A = fetchByte(); }
+void CPU::OP_CCF()       {
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, !getFlag(F_C)); // C = ~C
 }

@@ -13,7 +13,7 @@ public:
     void step_OLD();
     void reset();
 
-    long long getCycles () {return cycles;};
+    [[nodiscard]] long long getCycles () const {return cycles;};
 
     // Registros:
     // TODO: idealmente deben de ser privados.
@@ -27,10 +27,10 @@ public:
     Word PC = 0x0000;
 
     // Registros adicionales (union de los registros)
-    Word getAF() const {return (A << 8) | F;}
-    Word getBC() const {return (B << 8) | C;}
-    Word getDE() const {return (D << 8) | E;}
-    Word getHL() const {return (H << 8) | L;}
+    [[nodiscard]] Word getAF() const {return (A << 8) | F;}
+    [[nodiscard]] Word getBC() const {return (B << 8) | C;}
+    [[nodiscard]] Word getDE() const {return (D << 8) | E;}
+    [[nodiscard]] Word getHL() const {return (H << 8) | L;}
 
     // Separan los 16 bits en dos de 8.
     void setAF(Word v) { A = (v >> 8); F = v & 0x00F0; } // F tiene 4 bits bajos siempre en 0 por definicion
@@ -145,6 +145,42 @@ private:
     void OP_DEC_E();        // 0x1D
     void OP_LD_E_d8();      // 0x1E
     void OP_RRA();          // 0x1F
+
+    // --- Opcodes 0x20 a 0x2F ---
+    void OP_JR_NZ_r8();     // 0x20
+    void OP_LD_HL_d16();    // 0x21
+    void OP_LDI_HL_A();     // 0x22 (LD (HL+), A)
+    void OP_INC_HL();       // 0x23
+    void OP_INC_H();        // 0x24
+    void OP_DEC_H();        // 0x25
+    void OP_LD_H_d8();      // 0x26
+    void OP_DAA();          // 0x27
+    void OP_JR_Z_r8();      // 0x28
+    void OP_ADD_HL_HL();    // 0x29
+    void OP_LDI_A_HL();     // 0x2A (LD A, (HL+))
+    void OP_DEC_HL();       // 0x2B
+    void OP_INC_L();        // 0x2C
+    void OP_DEC_L();        // 0x2D
+    void OP_LD_L_d8();      // 0x2E
+    void OP_CPL();          // 0x2F
+
+    // --- Opcodes 0x30 a 0x3F ---
+    void OP_JR_NC_r8();     // 0x30
+    void OP_LD_SP_d16();    // 0x31
+    void OP_LDD_HL_A();     // 0x32 (LD (HL-), A)
+    void OP_INC_SP();       // 0x33
+    void OP_INC_aHL();      // 0x34 (INC (HL))
+    void OP_DEC_aHL();      // 0x35 (DEC (HL))
+    void OP_LD_aHL_d8();    // 0x36 (LD (HL), d8)
+    void OP_SCF();          // 0x37
+    void OP_JR_C_r8();      // 0x38
+    void OP_ADD_HL_SP();    // 0x39
+    void OP_LDD_A_HL();     // 0x3A (LD A, (HL-))
+    void OP_DEC_SP();       // 0x3B
+    void OP_INC_A();        // 0x3C
+    void OP_DEC_A();        // 0x3D
+    void OP_LD_A_d8();      // 0x3E
+    void OP_CCF();          // 0x3F
 
 
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
