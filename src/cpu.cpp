@@ -1274,6 +1274,32 @@ void CPU::rr(Byte& reg) {
     setFlag(F_C, isCarry);
 }
 
+// Rotate Left Circular
+Byte CPU::rlc(Byte& reg, bool setZeroFlag) {
+    Byte bit7 = reg >> 7;
+    Byte result = (reg << 1) | bit7;
+
+    setFlag(F_C, bit7);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+
+    setFlag(F_Z, setZeroFlag && (result == 0));
+    return result;
+}
+
+// Rotate Right Circular
+Byte CPU::rrc(Byte& reg, bool setZeroFlag) {
+    Byte bit0 = reg & 0x01;
+    Byte result = (reg >> 1) | (bit0 << 7);
+
+    setFlag(F_C, bit0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_Z, setZeroFlag && (result == 0));
+
+    return result;
+}
+
 // Shift right logical
 void CPU::srl(Byte& reg) {
     // 1. Guardamos el bit 0 (que caerá al Carry)
@@ -1394,21 +1420,25 @@ void CPU::OP_UNKNOWN() {
 // Opcodes 0x00 - 0x0F
 // =========================================================
 void CPU::OP_NOP() {}
-void CPU::OP_LD_BC_d16() { /* TODO */ }
-void CPU::OP_LD_BC_A()   { /* TODO */ }
-void CPU::OP_INC_BC()    { /* TODO */ }
-void CPU::OP_INC_B()     { /* TODO */ }
-void CPU::OP_DEC_B()     { /* TODO */ }
-void CPU::OP_LD_B_d8()   { /* TODO */ }
-void CPU::OP_RLCA()      { /* TODO */ }
-void CPU::OP_LD_a16_SP() { /* TODO */ }
-void CPU::OP_ADD_HL_BC() { /* TODO */ }
-void CPU::OP_LD_A_BC()   { /* TODO */ }
-void CPU::OP_DEC_BC()    { /* TODO */ }
-void CPU::OP_INC_C()     { /* TODO */ }
-void CPU::OP_DEC_C()     { /* TODO */ }
-void CPU::OP_LD_C_d8()   { /* TODO */ }
-void CPU::OP_RRCA()      { /* TODO */ }
+void CPU::OP_LD_BC_d16() { setBC(fetchWord()); }
+void CPU::OP_LD_BC_A()   { bus.write(getBC(), A);}
+void CPU::OP_INC_BC()    { setBC(getBC() + 1);}
+void CPU::OP_INC_B()     { inc(B); }
+void CPU::OP_DEC_B()     { dec(B); }
+void CPU::OP_LD_B_d8()   { B = fetchByte(); }
+void CPU::OP_RLCA()      { A = rlc(A, false); }
+void CPU::OP_LD_a16_SP() {
+    Word addr = fetchWord();
+    bus.write(addr, SP);
+    bus.write(addr + 1, (SP >> 8));
+}
+void CPU::OP_ADD_HL_BC() { addHL(getBC()); }
+void CPU::OP_LD_A_BC()   { A = bus.read(getBC()); }
+void CPU::OP_DEC_BC()    { setBC(getBC() - 1); }
+void CPU::OP_INC_C()     { inc(C); }
+void CPU::OP_DEC_C()     { dec(C); }
+void CPU::OP_LD_C_d8()   { C = fetchByte(); }
+void CPU::OP_RRCA()      { A = rrc(A, false); }
 
 // =========================================================
 // Opcodes 0x10 - 0x1F

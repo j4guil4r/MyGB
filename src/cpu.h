@@ -92,6 +92,8 @@ private:
     void rr(Byte &reg);
     void srl(Byte &reg);
     void daa();
+    Byte rlc(Byte &reg, bool setZeroFlag);
+    Byte rrc(Byte &reg, bool setZeroFlag);
 
     //====== ARQUITECTURA PARA INSTRUCCIONES ======//
     using OpcodeHandler = void (CPU::*)();
