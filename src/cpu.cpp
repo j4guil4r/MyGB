@@ -50,6 +50,7 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
 }
 
 void CPU::step() {
+    if (isStopped) return;
     if (isHalted) {
         cycles += 4;
         return;
@@ -1275,29 +1276,26 @@ void CPU::rr(Byte& reg) {
 }
 
 // Rotate Left Circular
-Byte CPU::rlc(Byte& reg, bool setZeroFlag) {
+void CPU::rlc(Byte& reg, bool setZeroFlag) {
     Byte bit7 = reg >> 7;
-    Byte result = (reg << 1) | bit7;
+    reg = (reg << 1) | bit7;
 
     setFlag(F_C, bit7);
     setFlag(F_N, false);
     setFlag(F_H, false);
 
-    setFlag(F_Z, setZeroFlag && (result == 0));
-    return result;
+    setFlag(F_Z, setZeroFlag && (reg == 0));
 }
 
 // Rotate Right Circular
-Byte CPU::rrc(Byte& reg, bool setZeroFlag) {
+void CPU::rrc(Byte& reg, bool setZeroFlag) {
     Byte bit0 = reg & 0x01;
-    Byte result = (reg >> 1) | (bit0 << 7);
+    reg = (reg >> 1) | (bit0 << 7);
 
     setFlag(F_C, bit0);
     setFlag(F_N, false);
     setFlag(F_H, false);
-    setFlag(F_Z, setZeroFlag && (result == 0));
-
-    return result;
+    setFlag(F_Z, setZeroFlag && (reg == 0));
 }
 
 // Shift right logical
@@ -1356,6 +1354,10 @@ void CPU::handleInterrupts() {
     // Leemos IE (Enabled) e IF (Request) desde el Bus
     Byte IE = bus.read(0xFFFF);
     Byte IF = bus.read(0xFF0F);
+
+    if ((IE & IF & 0x10) != 0) {
+        isStopped = false;
+    }
 
     if ((IE & IF & 0x1F) != 0) {
         // Esto pasa siempre, tenga IME on u off
@@ -1426,7 +1428,7 @@ void CPU::OP_INC_BC()    { setBC(getBC() + 1);}
 void CPU::OP_INC_B()     { inc(B); }
 void CPU::OP_DEC_B()     { dec(B); }
 void CPU::OP_LD_B_d8()   { B = fetchByte(); }
-void CPU::OP_RLCA()      { A = rlc(A, false); }
+void CPU::OP_RLCA()      { rlc(A, false); }
 void CPU::OP_LD_a16_SP() {
     Word addr = fetchWord();
     bus.write(addr, SP);
@@ -1438,24 +1440,36 @@ void CPU::OP_DEC_BC()    { setBC(getBC() - 1); }
 void CPU::OP_INC_C()     { inc(C); }
 void CPU::OP_DEC_C()     { dec(C); }
 void CPU::OP_LD_C_d8()   { C = fetchByte(); }
-void CPU::OP_RRCA()      { A = rrc(A, false); }
+void CPU::OP_RRCA()      { rrc(A, false); }
 
 // =========================================================
 // Opcodes 0x10 - 0x1F
 // =========================================================
-void CPU::OP_STOP()      { /* TODO */ }
-void CPU::OP_LD_DE_d16() { /* TODO */ }
-void CPU::OP_LD_DE_A()   { /* TODO */ }
-void CPU::OP_INC_DE()    { /* TODO */ }
-void CPU::OP_INC_D()     { /* TODO */ }
-void CPU::OP_DEC_D()     { /* TODO */ }
-void CPU::OP_LD_D_d8()   { /* TODO */ }
-void CPU::OP_RLA()       { /* TODO */ }
-void CPU::OP_JR_r8()     { /* TODO */ }
-void CPU::OP_ADD_HL_DE() { /* TODO */ }
-void CPU::OP_LD_A_DE()   { /* TODO */ }
-void CPU::OP_DEC_DE()    { /* TODO */ }
-void CPU::OP_INC_E()     { /* TODO */ }
-void CPU::OP_DEC_E()     { /* TODO */ }
-void CPU::OP_LD_E_d8()   { /* TODO */ }
-void CPU::OP_RRA()       { /* TODO */ }
+void CPU::OP_STOP()      {
+    fetchByte();
+    isStopped = true;
+}
+void CPU::OP_LD_DE_d16() { setDE(fetchWord()); }
+void CPU::OP_LD_DE_A()   { bus.write(getDE(), A); }
+void CPU::OP_INC_DE()    { setDE(getDE() + 1); }
+void CPU::OP_INC_D()     { inc(D); }
+void CPU::OP_DEC_D()     { dec(D); }
+void CPU::OP_LD_D_d8()   { D = fetchByte(); }
+void CPU::OP_RLA()       {
+    rl(A);
+    setFlag(F_Z, false);
+}
+void CPU::OP_JR_r8()     {
+    const auto offset = static_cast<int8_t>(fetchByte());
+    PC += offset;
+}
+void CPU::OP_ADD_HL_DE() { addHL(getDE()); }
+void CPU::OP_LD_A_DE()   { A = bus.read(getDE()); }
+void CPU::OP_DEC_DE()    { setDE(getDE() - 1); }
+void CPU::OP_INC_E()     { inc(E); }
+void CPU::OP_DEC_E()     { dec(E); }
+void CPU::OP_LD_E_d8()   { E = fetchByte(); }
+void CPU::OP_RRA()       {
+    rr(A);
+    setFlag(F_Z, false);
+}

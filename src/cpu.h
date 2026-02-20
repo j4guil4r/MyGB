@@ -65,6 +65,7 @@ private:
     long long cycles = 0;
     bool ime = false; // Interrupt Master Enable
     bool isHalted = false;
+    bool isStopped = false;
 
     // ============= HELPERS ===============//
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
@@ -92,8 +93,8 @@ private:
     void rr(Byte &reg);
     void srl(Byte &reg);
     void daa();
-    Byte rlc(Byte &reg, bool setZeroFlag);
-    Byte rrc(Byte &reg, bool setZeroFlag);
+    void rlc(Byte &reg, bool setZeroFlag);
+    void rrc(Byte &reg, bool setZeroFlag);
 
     //====== ARQUITECTURA PARA INSTRUCCIONES ======//
     using OpcodeHandler = void (CPU::*)();
