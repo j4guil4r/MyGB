@@ -190,6 +190,42 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     instructions[0x9E] = { "SBC A, (HL)", &CPU::OP_SBC_A_aHL, 8 };
     instructions[0x9F] = { "SBC A, A",    &CPU::OP_SBC_A_A,   4 };
 
+    // --- Fila 0xA0 ---
+    instructions[0xA0] = { "AND B",       &CPU::OP_AND_B,     4 };
+    instructions[0xA1] = { "AND C",       &CPU::OP_AND_C,     4 };
+    instructions[0xA2] = { "AND D",       &CPU::OP_AND_D,     4 };
+    instructions[0xA3] = { "AND E",       &CPU::OP_AND_E,     4 };
+    instructions[0xA4] = { "AND H",       &CPU::OP_AND_H,     4 };
+    instructions[0xA5] = { "AND L",       &CPU::OP_AND_L,     4 };
+    instructions[0xA6] = { "AND (HL)",    &CPU::OP_AND_aHL,   8 };
+    instructions[0xA7] = { "AND A",       &CPU::OP_AND_A,     4 };
+    instructions[0xA8] = { "XOR B",       &CPU::OP_XOR_B,     4 };
+    instructions[0xA9] = { "XOR C",       &CPU::OP_XOR_C,     4 };
+    instructions[0xAA] = { "XOR D",       &CPU::OP_XOR_D,     4 };
+    instructions[0xAB] = { "XOR E",       &CPU::OP_XOR_E,     4 };
+    instructions[0xAC] = { "XOR H",       &CPU::OP_XOR_H,     4 };
+    instructions[0xAD] = { "XOR L",       &CPU::OP_XOR_L,     4 };
+    instructions[0xAE] = { "XOR (HL)",    &CPU::OP_XOR_aHL,   8 };
+    instructions[0xAF] = { "XOR A",       &CPU::OP_XOR_A,     4 };
+
+    // --- Fila 0xB0 ---
+    instructions[0xB0] = { "OR B",        &CPU::OP_OR_B,      4 };
+    instructions[0xB1] = { "OR C",        &CPU::OP_OR_C,      4 };
+    instructions[0xB2] = { "OR D",        &CPU::OP_OR_D,      4 };
+    instructions[0xB3] = { "OR E",        &CPU::OP_OR_E,      4 };
+    instructions[0xB4] = { "OR H",        &CPU::OP_OR_H,      4 };
+    instructions[0xB5] = { "OR L",        &CPU::OP_OR_L,      4 };
+    instructions[0xB6] = { "OR (HL)",     &CPU::OP_OR_aHL,    8 };
+    instructions[0xB7] = { "OR A",        &CPU::OP_OR_A,      4 };
+    instructions[0xB8] = { "CP B",        &CPU::OP_CP_B,      4 };
+    instructions[0xB9] = { "CP C",        &CPU::OP_CP_C,      4 };
+    instructions[0xBA] = { "CP D",        &CPU::OP_CP_D,      4 };
+    instructions[0xBB] = { "CP E",        &CPU::OP_CP_E,      4 };
+    instructions[0xBC] = { "CP H",        &CPU::OP_CP_H,      4 };
+    instructions[0xBD] = { "CP L",        &CPU::OP_CP_L,      4 };
+    instructions[0xBE] = { "CP (HL)",     &CPU::OP_CP_aHL,    8 };
+    instructions[0xBF] = { "CP A",        &CPU::OP_CP_A,      4 };
+
 }
 
 void CPU::step() {
@@ -1867,3 +1903,43 @@ void CPU::OP_SBC_A_aHL() {
     sbc(val);
 }
 void CPU::OP_SBC_A_A()   { sbc(A); }
+
+// =========================================================
+// Opcodes 0xA0 - 0xAF
+// =========================================================
+void CPU::OP_AND_B()   { and_op(B);}
+void CPU::OP_AND_C()   { and_op(C); }
+void CPU::OP_AND_D()   { and_op(D); }
+void CPU::OP_AND_E()   { and_op(E); }
+void CPU::OP_AND_H()   { and_op(H); }
+void CPU::OP_AND_L()   { and_op(L); }
+void CPU::OP_AND_aHL() { and_op(bus.read(getHL()));}
+void CPU::OP_AND_A()   { and_op(A);}
+void CPU::OP_XOR_B()   { xor_op(B);}
+void CPU::OP_XOR_C()   { xor_op(C); }
+void CPU::OP_XOR_D()   { xor_op(D); }
+void CPU::OP_XOR_E()   { xor_op(E); }
+void CPU::OP_XOR_H()   { xor_op(H); }
+void CPU::OP_XOR_L()   { xor_op(L); }
+void CPU::OP_XOR_aHL() { xor_op(bus.read(getHL())); }
+void CPU::OP_XOR_A()   { xor_op(A); }
+
+// =========================================================
+// Opcodes 0xB0 - 0xBF
+// =========================================================
+void CPU::OP_OR_B()    { or_op(B);}
+void CPU::OP_OR_C()    { or_op(C); }
+void CPU::OP_OR_D()    { or_op(D); }
+void CPU::OP_OR_E()    { or_op(E); }
+void CPU::OP_OR_H()    { or_op(H); }
+void CPU::OP_OR_L()    { or_op(L); }
+void CPU::OP_OR_aHL()  { or_op(bus.read(getHL())); }
+void CPU::OP_OR_A()    { or_op(A); }
+void CPU::OP_CP_B()    { cp(B);}
+void CPU::OP_CP_C()    { cp(C); }
+void CPU::OP_CP_D()    { cp(D); }
+void CPU::OP_CP_E()    { cp(E); }
+void CPU::OP_CP_H()    { cp(H); }
+void CPU::OP_CP_L()    { cp(L); }
+void CPU::OP_CP_aHL()  { cp(bus.read(getHL())); }
+void CPU::OP_CP_A()    { cp(A); }

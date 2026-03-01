@@ -290,6 +290,42 @@ private:
     void OP_SBC_A_aHL();    // 0x9E (SBC A, (HL))
     void OP_SBC_A_A();      // 0x9F
 
+    // --- Opcodes 0xA0 a 0xAF ---
+    void OP_AND_B();        // 0xA0
+    void OP_AND_C();        // 0xA1
+    void OP_AND_D();        // 0xA2
+    void OP_AND_E();        // 0xA3
+    void OP_AND_H();        // 0xA4
+    void OP_AND_L();        // 0xA5
+    void OP_AND_aHL();      // 0xA6 (AND (HL))
+    void OP_AND_A();        // 0xA7
+    void OP_XOR_B();        // 0xA8
+    void OP_XOR_C();        // 0xA9
+    void OP_XOR_D();        // 0xAA
+    void OP_XOR_E();        // 0xAB
+    void OP_XOR_H();        // 0xAC
+    void OP_XOR_L();        // 0xAD
+    void OP_XOR_aHL();      // 0xAE (XOR (HL))
+    void OP_XOR_A();        // 0xAF
+
+    // --- Opcodes 0xB0 a 0xBF ---
+    void OP_OR_B();         // 0xB0
+    void OP_OR_C();         // 0xB1
+    void OP_OR_D();         // 0xB2
+    void OP_OR_E();         // 0xB3
+    void OP_OR_H();         // 0xB4
+    void OP_OR_L();         // 0xB5
+    void OP_OR_aHL();       // 0xB6 (OR (HL))
+    void OP_OR_A();         // 0xB7
+    void OP_CP_B();         // 0xB8
+    void OP_CP_C();         // 0xB9
+    void OP_CP_D();         // 0xBA
+    void OP_CP_E();         // 0xBB
+    void OP_CP_H();         // 0xBC
+    void OP_CP_L();         // 0xBD
+    void OP_CP_aHL();       // 0xBE (CP (HL))
+    void OP_CP_A();         // 0xBF
+
 
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
 };
