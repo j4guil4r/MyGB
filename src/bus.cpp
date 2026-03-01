@@ -1,4 +1,4 @@
-#include "Bus.h"
+#include "bus.h"
 
 Bus::Bus() {
     // Inicializamos las memorias internas a 0 para no tener basura
