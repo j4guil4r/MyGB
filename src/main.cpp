@@ -20,7 +20,7 @@ int main () {
     cpu.SP = 0xFFFE;
     cpu.PC = 0x0100; // Inicio del juego
 
-    if (!gbBus.loadROM("02-interrupts.gb")) {
+    if (!gbBus.loadROM("roms/02-interrupts.gb")) {
         return -1; // Salir si falla
     }
 

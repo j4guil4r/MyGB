@@ -82,6 +82,113 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     instructions[0x3E] = { "LD A, d8",     &CPU::OP_LD_A_d8,    8  };
     instructions[0x3F] = { "CCF",          &CPU::OP_CCF,        4  };
 
+    // --- Fila 0x40 ---
+    instructions[0x40] = { "LD B, B",    &CPU::OP_LD_B_B,   4 };
+    instructions[0x41] = { "LD B, C",    &CPU::OP_LD_B_C,   4 };
+    instructions[0x42] = { "LD B, D",    &CPU::OP_LD_B_D,   4 };
+    instructions[0x43] = { "LD B, E",    &CPU::OP_LD_B_E,   4 };
+    instructions[0x44] = { "LD B, H",    &CPU::OP_LD_B_H,   4 };
+    instructions[0x45] = { "LD B, L",    &CPU::OP_LD_B_L,   4 };
+    instructions[0x46] = { "LD B, (HL)", &CPU::OP_LD_B_aHL, 8 };
+    instructions[0x47] = { "LD B, A",    &CPU::OP_LD_B_A,   4 };
+    instructions[0x48] = { "LD C, B",    &CPU::OP_LD_C_B,   4 };
+    instructions[0x49] = { "LD C, C",    &CPU::OP_LD_C_C,   4 };
+    instructions[0x4A] = { "LD C, D",    &CPU::OP_LD_C_D,   4 };
+    instructions[0x4B] = { "LD C, E",    &CPU::OP_LD_C_E,   4 };
+    instructions[0x4C] = { "LD C, H",    &CPU::OP_LD_C_H,   4 };
+    instructions[0x4D] = { "LD C, L",    &CPU::OP_LD_C_L,   4 };
+    instructions[0x4E] = { "LD C, (HL)", &CPU::OP_LD_C_aHL, 8 };
+    instructions[0x4F] = { "LD C, A",    &CPU::OP_LD_C_A,   4 };
+
+    // --- Fila 0x50 ---
+    instructions[0x50] = { "LD D, B",    &CPU::OP_LD_D_B,   4 };
+    instructions[0x51] = { "LD D, C",    &CPU::OP_LD_D_C,   4 };
+    instructions[0x52] = { "LD D, D",    &CPU::OP_LD_D_D,   4 };
+    instructions[0x53] = { "LD D, E",    &CPU::OP_LD_D_E,   4 };
+    instructions[0x54] = { "LD D, H",    &CPU::OP_LD_D_H,   4 };
+    instructions[0x55] = { "LD D, L",    &CPU::OP_LD_D_L,   4 };
+    instructions[0x56] = { "LD D, (HL)", &CPU::OP_LD_D_aHL, 8 };
+    instructions[0x57] = { "LD D, A",    &CPU::OP_LD_D_A,   4 };
+    instructions[0x58] = { "LD E, B",    &CPU::OP_LD_E_B,   4 };
+    instructions[0x59] = { "LD E, C",    &CPU::OP_LD_E_C,   4 };
+    instructions[0x5A] = { "LD E, D",    &CPU::OP_LD_E_D,   4 };
+    instructions[0x5B] = { "LD E, E",    &CPU::OP_LD_E_E,   4 };
+    instructions[0x5C] = { "LD E, H",    &CPU::OP_LD_E_H,   4 };
+    instructions[0x5D] = { "LD E, L",    &CPU::OP_LD_E_L,   4 };
+    instructions[0x5E] = { "LD E, (HL)", &CPU::OP_LD_E_aHL, 8 };
+    instructions[0x5F] = { "LD E, A",    &CPU::OP_LD_E_A,   4 };
+
+    // --- Fila 0x60 ---
+    instructions[0x60] = { "LD H, B",    &CPU::OP_LD_H_B,   4 };
+    instructions[0x61] = { "LD H, C",    &CPU::OP_LD_H_C,   4 };
+    instructions[0x62] = { "LD H, D",    &CPU::OP_LD_H_D,   4 };
+    instructions[0x63] = { "LD H, E",    &CPU::OP_LD_H_E,   4 };
+    instructions[0x64] = { "LD H, H",    &CPU::OP_LD_H_H,   4 };
+    instructions[0x65] = { "LD H, L",    &CPU::OP_LD_H_L,   4 };
+    instructions[0x66] = { "LD H, (HL)", &CPU::OP_LD_H_aHL, 8 };
+    instructions[0x67] = { "LD H, A",    &CPU::OP_LD_H_A,   4 };
+    instructions[0x68] = { "LD L, B",    &CPU::OP_LD_L_B,   4 };
+    instructions[0x69] = { "LD L, C",    &CPU::OP_LD_L_C,   4 };
+    instructions[0x6A] = { "LD L, D",    &CPU::OP_LD_L_D,   4 };
+    instructions[0x6B] = { "LD L, E",    &CPU::OP_LD_L_E,   4 };
+    instructions[0x6C] = { "LD L, H",    &CPU::OP_LD_L_H,   4 };
+    instructions[0x6D] = { "LD L, L",    &CPU::OP_LD_L_L,   4 };
+    instructions[0x6E] = { "LD L, (HL)", &CPU::OP_LD_L_aHL, 8 };
+    instructions[0x6F] = { "LD L, A",    &CPU::OP_LD_L_A,   4 };
+
+    // --- Fila 0x70 ---
+    instructions[0x70] = { "LD (HL), B", &CPU::OP_LD_aHL_B, 8 };
+    instructions[0x71] = { "LD (HL), C", &CPU::OP_LD_aHL_C, 8 };
+    instructions[0x72] = { "LD (HL), D", &CPU::OP_LD_aHL_D, 8 };
+    instructions[0x73] = { "LD (HL), E", &CPU::OP_LD_aHL_E, 8 };
+    instructions[0x74] = { "LD (HL), H", &CPU::OP_LD_aHL_H, 8 };
+    instructions[0x75] = { "LD (HL), L", &CPU::OP_LD_aHL_L, 8 };
+    instructions[0x76] = { "HALT",       &CPU::OP_HALT,     4 };
+    instructions[0x77] = { "LD (HL), A", &CPU::OP_LD_aHL_A, 8 };
+    instructions[0x78] = { "LD A, B",    &CPU::OP_LD_A_B,   4 };
+    instructions[0x79] = { "LD A, C",    &CPU::OP_LD_A_C,   4 };
+    instructions[0x7A] = { "LD A, D",    &CPU::OP_LD_A_D,   4 };
+    instructions[0x7B] = { "LD A, E",    &CPU::OP_LD_A_E,   4 };
+    instructions[0x7C] = { "LD A, H",    &CPU::OP_LD_A_H,   4 };
+    instructions[0x7D] = { "LD A, L",    &CPU::OP_LD_A_L,   4 };
+    instructions[0x7E] = { "LD A, (HL)", &CPU::OP_LD_A_aHL, 8 };
+    instructions[0x7F] = { "LD A, A",    &CPU::OP_LD_A_A,   4 };
+
+    // --- Fila 0x80 ---
+    instructions[0x80] = { "ADD A, B",    &CPU::OP_ADD_A_B,   4 };
+    instructions[0x81] = { "ADD A, C",    &CPU::OP_ADD_A_C,   4 };
+    instructions[0x82] = { "ADD A, D",    &CPU::OP_ADD_A_D,   4 };
+    instructions[0x83] = { "ADD A, E",    &CPU::OP_ADD_A_E,   4 };
+    instructions[0x84] = { "ADD A, H",    &CPU::OP_ADD_A_H,   4 };
+    instructions[0x85] = { "ADD A, L",    &CPU::OP_ADD_A_L,   4 };
+    instructions[0x86] = { "ADD A, (HL)", &CPU::OP_ADD_A_aHL, 8 };
+    instructions[0x87] = { "ADD A, A",    &CPU::OP_ADD_A_A,   4 };
+    instructions[0x88] = { "ADC A, B",    &CPU::OP_ADC_A_B,   4 };
+    instructions[0x89] = { "ADC A, C",    &CPU::OP_ADC_A_C,   4 };
+    instructions[0x8A] = { "ADC A, D",    &CPU::OP_ADC_A_D,   4 };
+    instructions[0x8B] = { "ADC A, E",    &CPU::OP_ADC_A_E,   4 };
+    instructions[0x8C] = { "ADC A, H",    &CPU::OP_ADC_A_H,   4 };
+    instructions[0x8D] = { "ADC A, L",    &CPU::OP_ADC_A_L,   4 };
+    instructions[0x8E] = { "ADC A, (HL)", &CPU::OP_ADC_A_aHL, 8 };
+    instructions[0x8F] = { "ADC A, A",    &CPU::OP_ADC_A_A,   4 };
+
+    // --- Fila 0x90 ---
+    instructions[0x90] = { "SUB B",       &CPU::OP_SUB_B,     4 };
+    instructions[0x91] = { "SUB C",       &CPU::OP_SUB_C,     4 };
+    instructions[0x92] = { "SUB D",       &CPU::OP_SUB_D,     4 };
+    instructions[0x93] = { "SUB E",       &CPU::OP_SUB_E,     4 };
+    instructions[0x94] = { "SUB H",       &CPU::OP_SUB_H,     4 };
+    instructions[0x95] = { "SUB L",       &CPU::OP_SUB_L,     4 };
+    instructions[0x96] = { "SUB (HL)",    &CPU::OP_SUB_aHL,   8 };
+    instructions[0x97] = { "SUB A",       &CPU::OP_SUB_A,     4 };
+    instructions[0x98] = { "SBC A, B",    &CPU::OP_SBC_A_B,   4 };
+    instructions[0x99] = { "SBC A, C",    &CPU::OP_SBC_A_C,   4 };
+    instructions[0x9A] = { "SBC A, D",    &CPU::OP_SBC_A_D,   4 };
+    instructions[0x9B] = { "SBC A, E",    &CPU::OP_SBC_A_E,   4 };
+    instructions[0x9C] = { "SBC A, H",    &CPU::OP_SBC_A_H,   4 };
+    instructions[0x9D] = { "SBC A, L",    &CPU::OP_SBC_A_L,   4 };
+    instructions[0x9E] = { "SBC A, (HL)", &CPU::OP_SBC_A_aHL, 8 };
+    instructions[0x9F] = { "SBC A, A",    &CPU::OP_SBC_A_A,   4 };
 
 }
 
@@ -1613,3 +1720,150 @@ void CPU::OP_CCF()       {
     setFlag(F_H, false);
     setFlag(F_C, !getFlag(F_C)); // C = ~C
 }
+
+// =========================================================
+// Opcodes 0x40 - 0x4F
+// =========================================================
+void CPU::OP_LD_B_B() {B = B;}
+void CPU::OP_LD_B_C() {B = C;}
+void CPU::OP_LD_B_D() {B = D;}
+void CPU::OP_LD_B_E() {B = E;}
+void CPU::OP_LD_B_H() {B = H;}
+void CPU::OP_LD_B_L() {B = L;}
+void CPU::OP_LD_B_aHL(){B = bus.read(getHL());}
+void CPU::OP_LD_B_A() {B = A;}
+void CPU::OP_LD_C_B() {C = B;}
+void CPU::OP_LD_C_C() {C = C;}
+void CPU::OP_LD_C_D() {C = D;}
+void CPU::OP_LD_C_E() {C = E;}
+void CPU::OP_LD_C_H() {C = H;}
+void CPU::OP_LD_C_L() {C = L;}
+void CPU::OP_LD_C_aHL(){C = bus.read(getHL());}
+void CPU::OP_LD_C_A() {C = A;}
+
+// =========================================================
+// Opcodes 0x50 - 0x5F
+// =========================================================
+void CPU::OP_LD_D_B() { D = B; }
+void CPU::OP_LD_D_C() { D = C; }
+void CPU::OP_LD_D_D() { D = D; }
+void CPU::OP_LD_D_E() { D = E; }
+void CPU::OP_LD_D_H() { D = H; }
+void CPU::OP_LD_D_L() { D = L; }
+void CPU::OP_LD_D_aHL() {D = bus.read(getHL());}
+void CPU::OP_LD_D_A() {D = A;}
+void CPU::OP_LD_E_B() {E = B;}
+void CPU::OP_LD_E_C() {E = C;}
+void CPU::OP_LD_E_D() {E = D;}
+void CPU::OP_LD_E_E() {E = E;}
+void CPU::OP_LD_E_H() {E = H;}
+void CPU::OP_LD_E_L() {E = L;}
+void CPU::OP_LD_E_aHL() { E = bus.read(getHL());}
+void CPU::OP_LD_E_A() {E = A;}
+
+// =========================================================
+// Opcodes 0x60 - 0x6F
+// =========================================================
+void CPU::OP_LD_H_B()   { H = B;}
+void CPU::OP_LD_H_C()   { H = C;}
+void CPU::OP_LD_H_D()   { H = D;}
+void CPU::OP_LD_H_E()   { H = E;}
+void CPU::OP_LD_H_H()   { H = H;}
+void CPU::OP_LD_H_L()   { H = L;}
+void CPU::OP_LD_H_aHL() { H = bus.read(getHL()); }
+void CPU::OP_LD_H_A()   { H = A; }
+void CPU::OP_LD_L_B()   { L = B; }
+void CPU::OP_LD_L_C()   { L = C; }
+void CPU::OP_LD_L_D()   { L = D; }
+void CPU::OP_LD_L_E()   { L = E; }
+void CPU::OP_LD_L_H()   { L = H; }
+void CPU::OP_LD_L_L()   { L = L; }
+void CPU::OP_LD_L_aHL() { L = bus.read(getHL()); }
+void CPU::OP_LD_L_A()   { L = A; }
+
+// =========================================================
+// Opcodes 0x70 - 0x7F
+// =========================================================
+void CPU::OP_LD_aHL_B() { bus.write(getHL(), B); }
+void CPU::OP_LD_aHL_C() { bus.write(getHL(), C);}
+void CPU::OP_LD_aHL_D() { bus.write(getHL(), D);}
+void CPU::OP_LD_aHL_E() { bus.write(getHL(), E);}
+void CPU::OP_LD_aHL_H() { bus.write(getHL(), H);}
+void CPU::OP_LD_aHL_L() { bus.write(getHL(), L);}
+void CPU::OP_HALT()     {            
+    // Leemos IE e IF para ver si ya hay una interrupción pendiente
+    Byte IE = bus.read(0xFFFF);
+    Byte IF = bus.read(0xFF0F);
+
+    // Si hay una interrupción pendiente (y habilitada en IE),
+    // HALT no surte efecto (bug del hardware, o simplemente no se duerme).
+    if ((IE & IF & 0x1F) != 0) {
+        // HALT Bug: En hardware real, esto causa que la siguiente
+        // instrucción se lea dos veces. Para emulación simple,
+        // basta con NO activar isHalted.
+    } else {
+        // Si no hay nada pendiente, a dormir.
+        isHalted = true;
+    }
+}
+void CPU::OP_LD_aHL_A() { bus.write(getHL(), A); }
+void CPU::OP_LD_A_B()   { A = B; }
+void CPU::OP_LD_A_C()   { A = C; }
+void CPU::OP_LD_A_D()   { A = D; }
+void CPU::OP_LD_A_E()   { A = E; }
+void CPU::OP_LD_A_H()   { A = H; }
+void CPU::OP_LD_A_L()   { A = L; }
+void CPU::OP_LD_A_aHL() { A = bus.read(getHL());}
+void CPU::OP_LD_A_A()   { A = A; }
+
+// =========================================================
+// Opcodes 0x80 - 0x8F
+// =========================================================
+void CPU::OP_ADD_A_B()   {add(B);}
+void CPU::OP_ADD_A_C()   {add(C);}
+void CPU::OP_ADD_A_D()   {add(D);}
+void CPU::OP_ADD_A_E()   {add(E);}
+void CPU::OP_ADD_A_H()   {add(H);}
+void CPU::OP_ADD_A_L()   {add(L);}
+void CPU::OP_ADD_A_aHL() { 
+    const Byte val = bus.read(getHL());
+    add(val);
+}
+void CPU::OP_ADD_A_A()   { add(A); }
+void CPU::OP_ADC_A_B()   { adc(B); }
+void CPU::OP_ADC_A_C()   { adc(C); }
+void CPU::OP_ADC_A_D()   { adc(D); }
+void CPU::OP_ADC_A_E()   { adc(E); }
+void CPU::OP_ADC_A_H()   { adc(H); }
+void CPU::OP_ADC_A_L()   { adc(L); }
+void CPU::OP_ADC_A_aHL() {
+    const Byte val = bus.read(getHL());
+    adc(val);
+}
+void CPU::OP_ADC_A_A()   { adc(A);}
+
+// =========================================================
+// Opcodes 0x90 - 0x9F
+// =========================================================
+void CPU::OP_SUB_B()     { sub(B); }
+void CPU::OP_SUB_C()     { sub(C); }
+void CPU::OP_SUB_D()     { sub(D); }
+void CPU::OP_SUB_E()     { sub(E); }
+void CPU::OP_SUB_H()     { sub(H); }
+void CPU::OP_SUB_L()     { sub(L); }
+void CPU::OP_SUB_aHL() {
+    const Byte val = bus.read(getHL());
+    sub(val);
+}
+void CPU::OP_SUB_A()     { sub(A); }
+void CPU::OP_SBC_A_B()   { sbc(B); }
+void CPU::OP_SBC_A_C()   { sbc(C); }
+void CPU::OP_SBC_A_D()   { sbc(D); }
+void CPU::OP_SBC_A_E()   { sbc(E); }
+void CPU::OP_SBC_A_H()   { sbc(H); }
+void CPU::OP_SBC_A_L()   { sbc(L); }
+void CPU::OP_SBC_A_aHL() {
+    const Byte val = bus.read(getHL());
+    sbc(val);
+}
+void CPU::OP_SBC_A_A()   { sbc(A); }

@@ -182,6 +182,114 @@ private:
     void OP_LD_A_d8();      // 0x3E
     void OP_CCF();          // 0x3F
 
+    // --- Opcodes 0x40 a 0x4F ---
+    void OP_LD_B_B();       // 0x40
+    void OP_LD_B_C();       // 0x41
+    void OP_LD_B_D();       // 0x42
+    void OP_LD_B_E();       // 0x43
+    void OP_LD_B_H();       // 0x44
+    void OP_LD_B_L();       // 0x45
+    void OP_LD_B_aHL();     // 0x46 (LD B, (HL))
+    void OP_LD_B_A();       // 0x47
+    void OP_LD_C_B();       // 0x48
+    void OP_LD_C_C();       // 0x49
+    void OP_LD_C_D();       // 0x4A
+    void OP_LD_C_E();       // 0x4B
+    void OP_LD_C_H();       // 0x4C
+    void OP_LD_C_L();       // 0x4D
+    void OP_LD_C_aHL();     // 0x4E (LD C, (HL))
+    void OP_LD_C_A();       // 0x4F
+
+    // --- Opcodes 0x50 a 0x5F ---
+    void OP_LD_D_B();       // 0x50
+    void OP_LD_D_C();       // 0x51
+    void OP_LD_D_D();       // 0x52
+    void OP_LD_D_E();       // 0x53
+    void OP_LD_D_H();       // 0x54
+    void OP_LD_D_L();       // 0x55
+    void OP_LD_D_aHL();     // 0x56 (LD D, (HL))
+    void OP_LD_D_A();       // 0x57
+    void OP_LD_E_B();       // 0x58
+    void OP_LD_E_C();       // 0x59
+    void OP_LD_E_D();       // 0x5A
+    void OP_LD_E_E();       // 0x5B
+    void OP_LD_E_H();       // 0x5C
+    void OP_LD_E_L();       // 0x5D
+    void OP_LD_E_aHL();     // 0x5E (LD E, (HL))
+    void OP_LD_E_A();       // 0x5F
+
+    // --- Opcodes 0x60 a 0x6F ---
+    void OP_LD_H_B();       // 0x60
+    void OP_LD_H_C();       // 0x61
+    void OP_LD_H_D();       // 0x62
+    void OP_LD_H_E();       // 0x63
+    void OP_LD_H_H();       // 0x64
+    void OP_LD_H_L();       // 0x65
+    void OP_LD_H_aHL();     // 0x66 (LD H, (HL))
+    void OP_LD_H_A();       // 0x67
+    void OP_LD_L_B();       // 0x68
+    void OP_LD_L_C();       // 0x69
+    void OP_LD_L_D();       // 0x6A
+    void OP_LD_L_E();       // 0x6B
+    void OP_LD_L_H();       // 0x6C
+    void OP_LD_L_L();       // 0x6D
+    void OP_LD_L_aHL();     // 0x6E (LD L, (HL))
+    void OP_LD_L_A();       // 0x6F
+
+    // --- Opcodes 0x70 a 0x7F ---
+    void OP_LD_aHL_B();     // 0x70 (LD (HL), B)
+    void OP_LD_aHL_C();     // 0x71 (LD (HL), C)
+    void OP_LD_aHL_D();     // 0x72 (LD (HL), D)
+    void OP_LD_aHL_E();     // 0x73 (LD (HL), E)
+    void OP_LD_aHL_H();     // 0x74 (LD (HL), H)
+    void OP_LD_aHL_L();     // 0x75 (LD (HL), L)
+    void OP_HALT();         // 0x76 HALT
+    void OP_LD_aHL_A();     // 0x77 (LD (HL), A)
+    void OP_LD_A_B();       // 0x78
+    void OP_LD_A_C();       // 0x79
+    void OP_LD_A_D();       // 0x7A
+    void OP_LD_A_E();       // 0x7B
+    void OP_LD_A_H();       // 0x7C
+    void OP_LD_A_L();       // 0x7D
+    void OP_LD_A_aHL();     // 0x7E (LD A, (HL))
+    void OP_LD_A_A();       // 0x7F
+
+    // --- Opcodes 0x80 a 0x8F ---
+    void OP_ADD_A_B();      // 0x80
+    void OP_ADD_A_C();      // 0x81
+    void OP_ADD_A_D();      // 0x82
+    void OP_ADD_A_E();      // 0x83
+    void OP_ADD_A_H();      // 0x84
+    void OP_ADD_A_L();      // 0x85
+    void OP_ADD_A_aHL();    // 0x86 (ADD A, (HL))
+    void OP_ADD_A_A();      // 0x87
+    void OP_ADC_A_B();      // 0x88
+    void OP_ADC_A_C();      // 0x89
+    void OP_ADC_A_D();      // 0x8A
+    void OP_ADC_A_E();      // 0x8B
+    void OP_ADC_A_H();      // 0x8C
+    void OP_ADC_A_L();      // 0x8D
+    void OP_ADC_A_aHL();    // 0x8E (ADC A, (HL))
+    void OP_ADC_A_A();      // 0x8F
+
+    // --- Opcodes 0x90 a 0x9F ---
+    void OP_SUB_B();        // 0x90
+    void OP_SUB_C();        // 0x91
+    void OP_SUB_D();        // 0x92
+    void OP_SUB_E();        // 0x93
+    void OP_SUB_H();        // 0x94
+    void OP_SUB_L();        // 0x95
+    void OP_SUB_aHL();      // 0x96 (SUB (HL))
+    void OP_SUB_A();        // 0x97
+    void OP_SBC_A_B();      // 0x98
+    void OP_SBC_A_C();      // 0x99
+    void OP_SBC_A_D();      // 0x9A
+    void OP_SBC_A_E();      // 0x9B
+    void OP_SBC_A_H();      // 0x9C
+    void OP_SBC_A_L();      // 0x9D
+    void OP_SBC_A_aHL();    // 0x9E (SBC A, (HL))
+    void OP_SBC_A_A();      // 0x9F
+
 
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
 };
