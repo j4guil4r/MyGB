@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <format>
+#include <stdexcept>
 
 #include "cpu.h"
 
@@ -261,6 +262,38 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     // 0xDD no se asigna, queda como UNKNOWN (Ilegal)
     instructions[0xDE] = { "SBC A, d8",    &CPU::OP_SBC_A_d8,    8  };
     instructions[0xDF] = { "RST 18H",      &CPU::OP_RST_18H,     16 };
+
+    // --- Fila 0xE0 ---
+    instructions[0xE0] = { "LDH (a8), A",  &CPU::OP_LDH_a8_A,    12 };
+    instructions[0xE1] = { "POP HL",       &CPU::OP_POP_HL,      12 };
+    instructions[0xE2] = { "LD (C), A",    &CPU::OP_LD_C_A,      8  };
+    // 0xE3 y 0xE4 quedan como UNKNOWN  
+    instructions[0xE5] = { "PUSH HL",      &CPU::OP_PUSH_HL,     16 };
+    instructions[0xE6] = { "AND d8",       &CPU::OP_AND_d8,      8  };
+    instructions[0xE7] = { "RST 20H",      &CPU::OP_RST_20H,     16 };
+    instructions[0xE8] = { "ADD SP, r8",   &CPU::OP_ADD_SP_r8,   16 };
+    instructions[0xE9] = { "JP (HL)",      &CPU::OP_JP_HL,       4  };
+    instructions[0xEA] = { "LD (a16), A",  &CPU::OP_LD_a16_A,    16 };
+    // 0xEB, 0xEC, 0xED quedan como UNKNOWN
+    instructions[0xEF] = { "RST 28H",      &CPU::OP_RST_28H,     16 };
+    instructions[0xEE] = { "XOR d8",       &CPU::OP_XOR_d8,      8  };
+
+    // --- Fila 0xF0 ---
+    instructions[0xF0] = { "LDH A, (a8)",  &CPU::OP_LDH_A_a8,    12 };
+    instructions[0xF1] = { "POP AF",       &CPU::OP_POP_AF,      12 };
+    instructions[0xF2] = { "LD A, (C)",    &CPU::OP_LD_A_C,      8  };
+    instructions[0xF3] = { "DI",           &CPU::OP_DI,          4  };
+    // 0xF4 queda como UNKNOWN
+    instructions[0xF5] = { "PUSH AF",      &CPU::OP_PUSH_AF,     16 };
+    instructions[0xF6] = { "OR d8",        &CPU::OP_OR_d8,       8  };
+    instructions[0xF7] = { "RST 30H",      &CPU::OP_RST_30H,     16 };
+    instructions[0xF8] = { "LD HL, SP+r8", &CPU::OP_LD_HL_SP_r8, 12 };
+    instructions[0xF9] = { "LD SP, HL",    &CPU::OP_LD_SP_HL,    8  };
+    instructions[0xFA] = { "LD A, (a16)",  &CPU::OP_LD_A_a16,    16 };
+    instructions[0xFB] = { "EI",           &CPU::OP_EI,          4  };
+    // 0xFC, 0xFD quedan como UNKNOWN
+    instructions[0xFE] = { "CP d8",        &CPU::OP_CP_d8,       8  };
+    instructions[0xFF] = { "RST 38H",      &CPU::OP_RST_38H,     16 };
 
 }
 
@@ -1242,7 +1275,7 @@ void CPU::step_OLD() {
 
         default:
             printf("Unhandled opcode: %02x\n", opcode);
-            break;
+            throw std::runtime_error("Unhandled Opcode ejecutado!");
     }
 }
 
@@ -2114,3 +2147,60 @@ void CPU::OP_RST_18H() {
     pushStack(PC);
     PC = 0x0018;
 }
+
+// =========================================================
+// Opcodes 0xE0 - 0xEF
+// =========================================================
+
+void CPU::OP_LDH_a8_A()  { bus.write(0xFF00 + fetchByte(), A); }
+void CPU::OP_POP_HL()    { setHL(popStack()); }
+void CPU::OP_LD_C_A()    { bus.write(0xFF00 + C, A); }
+void CPU::OP_PUSH_HL()   { pushStack(getHL()); }
+void CPU::OP_AND_d8()    { and_op(fetchByte()); }
+void CPU::OP_RST_20H()   { pushStack(PC); PC = 0x0020; }
+void CPU::OP_ADD_SP_r8() {
+    auto offset = static_cast<int8_t>(fetchByte());
+
+    // Calculamos los flags usando la versión SIN SIGNO del offset (uint8_t)
+    // y solo la parte baja (0xFF) de SP.
+    int result = (SP & 0xFF) + static_cast<uint8_t>(offset);
+
+    setFlag(F_Z, false);
+    setFlag(F_N, false);
+    setFlag(F_H, ((SP & 0x0F) + (static_cast<uint8_t>(offset) & 0x0F)) > 0x0F);
+    setFlag(F_C, result > 0xFF);
+
+    // Realizamos la suma real (SP es de 16 bits)
+    SP += offset;
+}
+void CPU::OP_JP_HL()     { PC = getHL(); /*Salta a la direccion de HL*/ }
+void CPU::OP_LD_a16_A()  { bus.write(fetchWord(), A);}
+void CPU::OP_XOR_d8()    { xor_op(fetchByte());}
+void CPU::OP_RST_28H()   { pushStack(PC); PC = 0x0028; }
+
+// =========================================================
+// Opcodes 0xF0 - 0xFF
+// =========================================================
+void CPU::OP_LDH_A_a8()  { A = bus.read(0xFF00 + fetchByte()); }
+void CPU::OP_POP_AF()    { setAF(popStack()); }
+void CPU::OP_LD_A_C()    { A = bus.read(0xFF00 + C); }
+void CPU::OP_DI()        { ime = false; }
+void CPU::OP_PUSH_AF()   { pushStack(getAF()); }
+void CPU::OP_OR_d8()     { or_op(fetchByte()); }
+void CPU::OP_RST_30H()   { pushStack(PC); PC = 0x0030; }
+void CPU::OP_LD_HL_SP_r8() {
+    auto offset = static_cast<int8_t>(fetchByte());
+    int result = (SP & 0xFF) + static_cast<uint8_t>(offset);
+
+    setFlag(F_Z, false);
+    setFlag(F_N, false);
+    setFlag(F_H, ((SP & 0x0F) + (static_cast<uint8_t>(offset) & 0x0F)) > 0x0F);
+    setFlag(F_C, result > 0xFF);
+
+    setHL(SP + offset);
+}
+void CPU::OP_LD_SP_HL()  { SP = getHL(); }
+void CPU::OP_LD_A_a16()  { A = bus.read(fetchWord()); }
+void CPU::OP_EI()        { ime = true; }
+void CPU::OP_CP_d8()     { cp(fetchByte()); }
+void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }

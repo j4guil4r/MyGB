@@ -362,6 +362,42 @@ private:
     void OP_SBC_A_d8();     // 0xDE
     void OP_RST_18H();      // 0xDF
 
+    // --- Opcodes 0xE0 a 0xEF ---
+    void OP_LDH_a8_A();     // 0xE0 (LD (0xFF00 + a8), A)
+    void OP_POP_HL();       // 0xE1
+    void OP_LD_C_A();       // 0xE2 (LD (0xFF00 + C), A)
+    // 0xE3 ILEGAL
+    // 0xE4 ILEGAL
+    void OP_PUSH_HL();      // 0xE5
+    void OP_AND_d8();       // 0xE6
+    void OP_RST_20H();      // 0xE7
+    void OP_ADD_SP_r8();    // 0xE8
+    void OP_JP_HL();        // 0xE9
+    void OP_LD_a16_A();     // 0xEA
+    // 0xEB ILEGAL
+    // 0xEC ILEGAL
+    // 0xED ILEGAL
+    void OP_XOR_d8();       // 0xEE
+    void OP_RST_28H();      // 0xEF
+
+    // --- Opcodes 0xF0 a 0xFF ---
+    void OP_LDH_A_a8();     // 0xF0 (LD A, (0xFF00 + a8))
+    void OP_POP_AF();       // 0xF1
+    void OP_LD_A_C();       // 0xF2 (LD A, (0xFF00 + C))
+    void OP_DI();           // 0xF3
+    // 0xF4 ILEGAL
+    void OP_PUSH_AF();      // 0xF5
+    void OP_OR_d8();        // 0xF6
+    void OP_RST_30H();      // 0xF7
+    void OP_LD_HL_SP_r8();  // 0xF8
+    void OP_LD_SP_HL();     // 0xF9
+    void OP_LD_A_a16();     // 0xFA
+    void OP_EI();           // 0xFB
+    // 0xFC ILEGAL
+    // 0xFD ILEGAL
+    void OP_CP_d8();        // 0xFE
+    void OP_RST_38H();      // 0xFF
+
 
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
 };
