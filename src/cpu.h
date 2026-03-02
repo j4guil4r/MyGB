@@ -326,6 +326,42 @@ private:
     void OP_CP_aHL();       // 0xBE (CP (HL))
     void OP_CP_A();         // 0xBF
 
+    // --- Opcodes 0xC0 a 0xCF ---
+    void OP_RET_NZ();       // 0xC0
+    void OP_POP_BC();       // 0xC1
+    void OP_JP_NZ_a16();    // 0xC2
+    void OP_JP_a16();       // 0xC3
+    void OP_CALL_NZ_a16();  // 0xC4
+    void OP_PUSH_BC();      // 0xC5
+    void OP_ADD_A_d8();     // 0xC6
+    void OP_RST_00H();      // 0xC7
+    void OP_RET_Z();        // 0xC8
+    void OP_RET();          // 0xC9
+    void OP_JP_Z_a16();     // 0xCA
+    // 0xCB es el PREFIX_CB, que ya declaraste antes
+    void OP_CALL_Z_a16();   // 0xCC
+    void OP_CALL_a16();     // 0xCD
+    void OP_ADC_A_d8();     // 0xCE
+    void OP_RST_08H();      // 0xCF
+
+    // --- Opcodes 0xD0 a 0xDF ---
+    void OP_RET_NC();       // 0xD0
+    void OP_POP_DE();       // 0xD1
+    void OP_JP_NC_a16();    // 0xD2
+    // 0xD3 es ILEGAL
+    void OP_CALL_NC_a16();  // 0xD4
+    void OP_PUSH_DE();      // 0xD5
+    void OP_SUB_d8();       // 0xD6
+    void OP_RST_10H();      // 0xD7
+    void OP_RET_C();        // 0xD8
+    void OP_RETI();         // 0xD9
+    void OP_JP_C_a16();     // 0xDA
+    // 0xDB es ILEGAL
+    void OP_CALL_C_a16();   // 0xDC
+    // 0xDD es ILEGAL
+    void OP_SBC_A_d8();     // 0xDE
+    void OP_RST_18H();      // 0xDF
+
 
     void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
 };

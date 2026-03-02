@@ -226,6 +226,42 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     instructions[0xBE] = { "CP (HL)",     &CPU::OP_CP_aHL,    8 };
     instructions[0xBF] = { "CP A",        &CPU::OP_CP_A,      4 };
 
+    // --- Fila 0xC0 ---
+    instructions[0xC0] = { "RET NZ",       &CPU::OP_RET_NZ,      8  }; // +12 si retorna
+    instructions[0xC1] = { "POP BC",       &CPU::OP_POP_BC,      12 };
+    instructions[0xC2] = { "JP NZ, a16",   &CPU::OP_JP_NZ_a16,   12 }; // +4 si salta
+    instructions[0xC3] = { "JP a16",       &CPU::OP_JP_a16,      16 };
+    instructions[0xC4] = { "CALL NZ, a16", &CPU::OP_CALL_NZ_a16, 12 }; // +12 si llama
+    instructions[0xC5] = { "PUSH BC",      &CPU::OP_PUSH_BC,     16 };
+    instructions[0xC6] = { "ADD A, d8",    &CPU::OP_ADD_A_d8,    8  };
+    instructions[0xC7] = { "RST 00H",      &CPU::OP_RST_00H,     16 };
+    instructions[0xC8] = { "RET Z",        &CPU::OP_RET_Z,       8  }; // +12 si retorna
+    instructions[0xC9] = { "RET",          &CPU::OP_RET,         16 };
+    instructions[0xCA] = { "JP Z, a16",    &CPU::OP_JP_Z_a16,    12 }; // +4 si salta
+    instructions[0xCB] = { "PREFIX CB",    &CPU::OP_PREFIX_CB,   4  }; // El prefijo mágico
+    instructions[0xCC] = { "CALL Z, a16",  &CPU::OP_CALL_Z_a16,  12 }; // +12 si llama
+    instructions[0xCD] = { "CALL a16",     &CPU::OP_CALL_a16,    24 };
+    instructions[0xCE] = { "ADC A, d8",    &CPU::OP_ADC_A_d8,    8  };
+    instructions[0xCF] = { "RST 08H",      &CPU::OP_RST_08H,     16 };
+
+    // --- Fila 0xD0 ---
+    instructions[0xD0] = { "RET NC",       &CPU::OP_RET_NC,      8  }; // +12 si retorna
+    instructions[0xD1] = { "POP DE",       &CPU::OP_POP_DE,      12 };
+    instructions[0xD2] = { "JP NC, a16",   &CPU::OP_JP_NC_a16,   12 }; // +4 si salta
+    // 0xD3 no se asigna, queda como UNKNOWN (Ilegal)
+    instructions[0xD4] = { "CALL NC, a16", &CPU::OP_CALL_NC_a16, 12 }; // +12 si llama
+    instructions[0xD5] = { "PUSH DE",      &CPU::OP_PUSH_DE,     16 };
+    instructions[0xD6] = { "SUB d8",       &CPU::OP_SUB_d8,      8  };
+    instructions[0xD7] = { "RST 10H",      &CPU::OP_RST_10H,     16 };
+    instructions[0xD8] = { "RET C",        &CPU::OP_RET_C,       8  }; // +12 si retorna
+    instructions[0xD9] = { "RETI",         &CPU::OP_RETI,        16 };
+    instructions[0xDA] = { "JP C, a16",    &CPU::OP_JP_C_a16,    12 }; // +4 si salta
+    // 0xDB no se asigna, queda como UNKNOWN (Ilegal)
+    instructions[0xDC] = { "CALL C, a16",  &CPU::OP_CALL_C_a16,  12 }; // +12 si llama
+    // 0xDD no se asigna, queda como UNKNOWN (Ilegal)
+    instructions[0xDE] = { "SBC A, d8",    &CPU::OP_SBC_A_d8,    8  };
+    instructions[0xDF] = { "RST 18H",      &CPU::OP_RST_18H,     16 };
+
 }
 
 void CPU::step() {
@@ -1943,3 +1979,138 @@ void CPU::OP_CP_H()    { cp(H); }
 void CPU::OP_CP_L()    { cp(L); }
 void CPU::OP_CP_aHL()  { cp(bus.read(getHL())); }
 void CPU::OP_CP_A()    { cp(A); }
+
+// =========================================================
+// Opcodes 0xC0 - 0xCF
+// =========================================================
+void CPU::OP_RET_NZ() {
+    if (!getFlag(F_Z)) {
+        PC = popStack();
+        cycles += 12;
+    }
+}
+void CPU::OP_POP_BC()      { setBC(popStack());}
+void CPU::OP_JP_NZ_a16() {
+    Word target = fetchWord();
+    if (!getFlag(F_Z)) {
+        PC = target;
+        cycles += 4;
+    }
+}
+void CPU::OP_JP_a16() {
+    Word targetAddress = fetchWord();
+    PC = targetAddress;
+}
+void CPU::OP_CALL_NZ_a16() {
+    Word target = fetchWord();
+    if (!getFlag(F_Z)) {
+        pushStack(PC);
+        PC = target;
+        cycles += 12;
+    }
+}
+void CPU::OP_PUSH_BC()     { pushStack(getBC());}
+void CPU::OP_ADD_A_d8()    { add(fetchByte()); }
+void CPU::OP_RST_00H() {
+    pushStack(PC);
+    PC = 0x0000;
+}
+void CPU::OP_RET_Z() {
+    if (getFlag(F_Z)) {
+        PC = popStack();
+        cycles += 12;
+    }      
+}
+void CPU::OP_RET()         { PC = popStack();}
+void CPU::OP_JP_Z_a16() {
+    Word target = fetchWord();
+    if (getFlag(F_Z)) {
+        PC = target;
+        cycles += 4;
+    }
+}
+// OP_PREFIX_CB
+void CPU::OP_PREFIX_CB() {}
+void CPU::OP_CALL_Z_a16() { 
+    Word target = fetchWord();
+    if (getFlag(F_Z)) {
+        pushStack(PC);
+        PC = target;
+        cycles += 12;
+    }
+}
+void CPU::OP_CALL_a16() {
+    Word targetAddr = fetchWord();
+    pushStack(PC);
+    PC = targetAddr;
+}
+void CPU::OP_ADC_A_d8()    { adc(fetchByte()); }
+void CPU::OP_RST_08H() {
+    pushStack(PC);
+    PC = 0x0008;
+}
+
+// =========================================================
+// Opcodes 0xD0 - 0xDF
+// =========================================================
+
+void CPU::OP_RET_NC() {
+    if (!getFlag(F_C)) {
+        PC = popStack();
+        cycles += 12;
+    }
+}
+void CPU::OP_POP_DE()      {setDE(popStack());}
+void CPU::OP_JP_NC_a16() {
+    Word target = fetchWord();
+    if (!getFlag(F_C)) {
+        PC = target;
+        cycles += 4;
+    }
+}
+void CPU::OP_CALL_NC_a16() {
+    Word target = fetchWord();
+    if (!getFlag(F_C)) {
+        pushStack(PC);
+        PC = target;
+        cycles += 12;
+    }
+}
+void CPU::OP_PUSH_DE()     { pushStack(getDE());}
+void CPU::OP_SUB_d8()      { sub(fetchByte());}
+void CPU::OP_RST_10H() {
+    pushStack(PC);
+    PC = 0x0010;
+}
+void CPU::OP_RET_C() {
+    if (getFlag(F_C)) {
+        PC = popStack();
+        cycles += 12;
+    }
+}
+void CPU::OP_RETI() { 
+    // Regresamos de donde vinimos (igual que RET)
+    PC = popStack();
+    // Volvemos a encender las interrupciones
+    ime = true;
+}
+void CPU::OP_JP_C_a16() {
+    Word target = fetchWord();
+    if (getFlag(F_C)) {
+        PC = target;
+        cycles += 4;
+    }
+}
+void CPU::OP_CALL_C_a16() {
+    Word target = fetchWord();
+    if (getFlag(F_C)) {
+        pushStack(PC);
+        PC = target;
+        cycles += 12;
+    }
+}
+void CPU::OP_SBC_A_d8()    { sbc(fetchByte()); }
+void CPU::OP_RST_18H() {
+    pushStack(PC);
+    PC = 0x0018;
+}
