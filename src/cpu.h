@@ -365,7 +365,7 @@ private:
     // --- Opcodes 0xE0 a 0xEF ---
     void OP_LDH_a8_A();     // 0xE0 (LD (0xFF00 + a8), A)
     void OP_POP_HL();       // 0xE1
-    void OP_LD_C_A();       // 0xE2 (LD (0xFF00 + C), A)
+    void OP_LD_C_A_BUS();   // 0xE2 (LD (0xFF00 + C), A)
     // 0xE3 ILEGAL
     // 0xE4 ILEGAL
     void OP_PUSH_HL();      // 0xE5
@@ -383,7 +383,7 @@ private:
     // --- Opcodes 0xF0 a 0xFF ---
     void OP_LDH_A_a8();     // 0xF0 (LD A, (0xFF00 + a8))
     void OP_POP_AF();       // 0xF1
-    void OP_LD_A_C();       // 0xF2 (LD A, (0xFF00 + C))
+    void OP_LD_A_C_BUS();   // 0xF2 (LD A, (0xFF00 + C))
     void OP_DI();           // 0xF3
     // 0xF4 ILEGAL
     void OP_PUSH_AF();      // 0xF5
@@ -399,5 +399,30 @@ private:
     void OP_RST_38H();      // 0xFF
 
 
-    void OP_PREFIX_CB(); // 0xCB (Este manejará su propio switch o sub-tabla)
+    /*
+    PREFIX CB
+    */
+    void OP_PREFIX_CB();
+    Instruction cb_instructions[256];
+    void OP_UNKNOWN_CB();
+
+    // =========================================================
+    // Opcodes CB: 0x00 - 0x0F (Rotaciones y Shifts)
+    // =========================================================
+    void OP_CB_RLC_B();   // 0x00
+    void OP_CB_RLC_C();   // 0x01
+    void OP_CB_RLC_D();   // 0x02
+    void OP_CB_RLC_E();   // 0x03
+    void OP_CB_RLC_H();   // 0x04
+    void OP_CB_RLC_L();   // 0x05
+    void OP_CB_RLC_aHL(); // 0x06
+    void OP_CB_RLC_A();   // 0x07
+    void OP_CB_RRC_B();   // 0x08
+    void OP_CB_RRC_C();   // 0x09
+    void OP_CB_RRC_D();   // 0x0A
+    void OP_CB_RRC_E();   // 0x0B
+    void OP_CB_RRC_H();   // 0x0C
+    void OP_CB_RRC_L();   // 0x0D
+    void OP_CB_RRC_aHL(); // 0x0E
+    void OP_CB_RRC_A();   // 0x0F
 };

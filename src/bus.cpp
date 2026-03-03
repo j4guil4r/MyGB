@@ -119,7 +119,9 @@ void Bus::write(Word addr, Byte data) {
 
         // Serial Output (Debug Blargg)
         if (addr == 0xFF01) {
-            std::cout << (char)data;
+            auto c = static_cast<char>(data);
+            //std::cout << c;
+            serialOutput += c;
         }
 
         // Timers
@@ -209,4 +211,8 @@ void Bus::updateTimers(const long long cycles) {
         // Si pasamos de la línea 153, volvemos a empezar (Frame nuevo)
         else if (ly > 153) ly = 0;
     }
+}
+
+std::string Bus::getSerialOutput () const {
+    return serialOutput;
 }

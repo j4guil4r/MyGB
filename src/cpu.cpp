@@ -9,6 +9,8 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
 
     for (int i = 0; i < 256; i++) instructions[i] = { "UNKNOWN", &CPU::OP_UNKNOWN, 0 };
 
+    for (int i = 0; i < 256; i++) cb_instructions[i] = {"UNKNOWN_CB", &CPU::OP_UNKNOWN_CB, 0};
+
     // =============== BLOQUE DE FUNCIONES ==================//
 
     // --- Fila 0x00 ---
@@ -266,7 +268,7 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     // --- Fila 0xE0 ---
     instructions[0xE0] = { "LDH (a8), A",  &CPU::OP_LDH_a8_A,    12 };
     instructions[0xE1] = { "POP HL",       &CPU::OP_POP_HL,      12 };
-    instructions[0xE2] = { "LD (C), A",    &CPU::OP_LD_C_A,      8  };
+    instructions[0xE2] = { "LD (C), A",    &CPU::OP_LD_C_A_BUS,      8  };
     // 0xE3 y 0xE4 quedan como UNKNOWN  
     instructions[0xE5] = { "PUSH HL",      &CPU::OP_PUSH_HL,     16 };
     instructions[0xE6] = { "AND d8",       &CPU::OP_AND_d8,      8  };
@@ -281,7 +283,7 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     // --- Fila 0xF0 ---
     instructions[0xF0] = { "LDH A, (a8)",  &CPU::OP_LDH_A_a8,    12 };
     instructions[0xF1] = { "POP AF",       &CPU::OP_POP_AF,      12 };
-    instructions[0xF2] = { "LD A, (C)",    &CPU::OP_LD_A_C,      8  };
+    instructions[0xF2] = { "LD A, (C)",    &CPU::OP_LD_A_C_BUS,  8  };
     instructions[0xF3] = { "DI",           &CPU::OP_DI,          4  };
     // 0xF4 queda como UNKNOWN
     instructions[0xF5] = { "PUSH AF",      &CPU::OP_PUSH_AF,     16 };
@@ -294,6 +296,26 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     // 0xFC, 0xFD quedan como UNKNOWN
     instructions[0xFE] = { "CP d8",        &CPU::OP_CP_d8,       8  };
     instructions[0xFF] = { "RST 38H",      &CPU::OP_RST_38H,     16 };
+
+    // =============== BLOQUE DE FUNCIONES CB ==================//
+
+    cb_instructions[0x00] = { "RLC B",    &CPU::OP_CB_RLC_B,   8  };
+    cb_instructions[0x01] = { "RLC C",    &CPU::OP_CB_RLC_C,   8  };
+    cb_instructions[0x02] = { "RLC D",    &CPU::OP_CB_RLC_D,   8  };
+    cb_instructions[0x03] = { "RLC E",    &CPU::OP_CB_RLC_E,   8  };
+    cb_instructions[0x04] = { "RLC H",    &CPU::OP_CB_RLC_H,   8  };
+    cb_instructions[0x05] = { "RLC L",    &CPU::OP_CB_RLC_L,   8  };
+    cb_instructions[0x06] = { "RLC (HL)", &CPU::OP_CB_RLC_aHL, 16 };
+    cb_instructions[0x07] = { "RLC A",    &CPU::OP_CB_RLC_A,   8  };
+    
+    cb_instructions[0x08] = { "RRC B",    &CPU::OP_CB_RRC_B,   8  };
+    cb_instructions[0x09] = { "RRC C",    &CPU::OP_CB_RRC_C,   8  };
+    cb_instructions[0x0A] = { "RRC D",    &CPU::OP_CB_RRC_D,   8  };
+    cb_instructions[0x0B] = { "RRC E",    &CPU::OP_CB_RRC_E,   8  };
+    cb_instructions[0x0C] = { "RRC H",    &CPU::OP_CB_RRC_H,   8  };
+    cb_instructions[0x0D] = { "RRC L",    &CPU::OP_CB_RRC_L,   8  };
+    cb_instructions[0x0E] = { "RRC (HL)", &CPU::OP_CB_RRC_aHL, 16 };
+    cb_instructions[0x0F] = { "RRC A",    &CPU::OP_CB_RRC_A,   8  };
 
 }
 
@@ -567,7 +589,9 @@ void CPU::step_OLD() {
                 case 0x38: srl(B); cycles += 8; break;
 
                 default:
-                    std::cout << std::format("Unimplemented CB: {:02X}\n", cbOp);
+                    //std::cout << std::format("Unimplemented CB: {:02X}\n", cbOp);
+                    std::string errCbOp = "Unimplemented CB: " + std::to_string(cbOp);
+                    throw std::runtime_error(errCbOp);
             }
         }
             break;
@@ -1274,7 +1298,7 @@ void CPU::step_OLD() {
             break;
 
         default:
-            printf("Unhandled opcode: %02x\n", opcode);
+            //printf("Unhandled opcode: %02x\n", opcode);
             throw std::runtime_error("Unhandled Opcode ejecutado!");
     }
 }
@@ -2062,8 +2086,7 @@ void CPU::OP_JP_Z_a16() {
         cycles += 4;
     }
 }
-// OP_PREFIX_CB
-void CPU::OP_PREFIX_CB() {}
+
 void CPU::OP_CALL_Z_a16() { 
     Word target = fetchWord();
     if (getFlag(F_Z)) {
@@ -2154,7 +2177,7 @@ void CPU::OP_RST_18H() {
 
 void CPU::OP_LDH_a8_A()  { bus.write(0xFF00 + fetchByte(), A); }
 void CPU::OP_POP_HL()    { setHL(popStack()); }
-void CPU::OP_LD_C_A()    { bus.write(0xFF00 + C, A); }
+void CPU::OP_LD_C_A_BUS()    { bus.write(0xFF00 + C, A); }
 void CPU::OP_PUSH_HL()   { pushStack(getHL()); }
 void CPU::OP_AND_d8()    { and_op(fetchByte()); }
 void CPU::OP_RST_20H()   { pushStack(PC); PC = 0x0020; }
@@ -2183,7 +2206,7 @@ void CPU::OP_RST_28H()   { pushStack(PC); PC = 0x0028; }
 // =========================================================
 void CPU::OP_LDH_A_a8()  { A = bus.read(0xFF00 + fetchByte()); }
 void CPU::OP_POP_AF()    { setAF(popStack()); }
-void CPU::OP_LD_A_C()    { A = bus.read(0xFF00 + C); }
+void CPU::OP_LD_A_C_BUS()    { A = bus.read(0xFF00 + C); }
 void CPU::OP_DI()        { ime = false; }
 void CPU::OP_PUSH_AF()   { pushStack(getAF()); }
 void CPU::OP_OR_d8()     { or_op(fetchByte()); }
@@ -2204,3 +2227,49 @@ void CPU::OP_LD_A_a16()  { A = bus.read(fetchWord()); }
 void CPU::OP_EI()        { ime = true; }
 void CPU::OP_CP_d8()     { cp(fetchByte()); }
 void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }
+
+
+
+// ======================== FUNCIONES PREFIX CB =================================//
+
+void CPU::OP_UNKNOWN_CB() {
+    // Rebobinamos 2 bytes: el opcode CB específico (ej. 0x00) y el prefijo 0xCB
+    PC -= 2; 
+    step_OLD();
+}
+
+void CPU::OP_PREFIX_CB() {
+    const Byte& cb_opcode = fetchByte();
+    Instruction inst = cb_instructions[cb_opcode];
+    cycles += inst.cycles;
+    (this->*inst.operate)();
+}
+
+// =========================================================
+// Opcodes CB: 0x00 - 0x0F
+// =========================================================
+void CPU::OP_CB_RLC_B()   { rlc(B, true); }
+void CPU::OP_CB_RLC_C()   { rlc(C, true); }
+void CPU::OP_CB_RLC_D()   { rlc(D, true); }
+void CPU::OP_CB_RLC_E()   { rlc(E, true); }
+void CPU::OP_CB_RLC_H()   { rlc(H, true); }
+void CPU::OP_CB_RLC_L()   { rlc(L, true); }
+void CPU::OP_CB_RLC_aHL() { 
+    // Para HL hay que leer y luego escribir de vuelta
+    Byte val = bus.read(getHL());
+    rlc(val, true);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_RLC_A()   { rlc(A, true); }
+void CPU::OP_CB_RRC_B()   { rrc(B, true); }
+void CPU::OP_CB_RRC_C()   { rrc(C, true); }
+void CPU::OP_CB_RRC_D()   { rrc(D, true); }
+void CPU::OP_CB_RRC_E()   { rrc(E, true); }
+void CPU::OP_CB_RRC_H()   { rrc(H, true); }
+void CPU::OP_CB_RRC_L()   { rrc(L, true); }
+void CPU::OP_CB_RRC_aHL() { 
+    Byte val = bus.read(getHL());
+    rrc(val, true);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_RRC_A()   { rrc(A, true); }

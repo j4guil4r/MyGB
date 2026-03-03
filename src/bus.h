@@ -15,6 +15,8 @@ public:
     void write(Word addr, Byte data);
 
     bool loadROM(const std::string& filename);
+    std::string getSerialOutput () const;
+    void clearSerialOutput() { serialOutput = ""; }
 
     // --- MEMORIAS INTERNAS ---
 
@@ -59,4 +61,6 @@ public:
 
     Byte ly = 0; // 0xFF44 - LCD Y Coordinate
     long long ppuCounter = 0; // Para simular el dibujo de líneas
+private:
+    std::string serialOutput = "";
 };
