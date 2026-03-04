@@ -10,7 +10,7 @@ public:
 
     // Core
     void step();
-    void step_OLD();
+    //void step_OLD();
     void reset();
 
     [[nodiscard]] long long getCycles () const {return cycles;};
@@ -89,6 +89,8 @@ private:
 
     // Bits / Rotaciones
     void bit(Byte regVal, int bitIndex);
+    void res(int bitIndex, Byte& regVal);
+    void set(int bitIndex, Byte& regVal);
     void rl(Byte& reg);
     void rr(Byte &reg);
     void srl(Byte &reg);
@@ -517,4 +519,60 @@ private:
     // Bit 7
     void OP_CB_BIT_7_B(); void OP_CB_BIT_7_C(); void OP_CB_BIT_7_D(); void OP_CB_BIT_7_E();
     void OP_CB_BIT_7_H(); void OP_CB_BIT_7_L(); void OP_CB_BIT_7_aHL(); void OP_CB_BIT_7_A();
+
+    // =========================================================
+    // Opcodes CB: 0x80 - 0xBF (Apagar Bits - RES)
+    // =========================================================
+    // Bit 0
+    void OP_CB_RES_0_B(); void OP_CB_RES_0_C(); void OP_CB_RES_0_D(); void OP_CB_RES_0_E();
+    void OP_CB_RES_0_H(); void OP_CB_RES_0_L(); void OP_CB_RES_0_aHL(); void OP_CB_RES_0_A();
+    // Bit 1
+    void OP_CB_RES_1_B(); void OP_CB_RES_1_C(); void OP_CB_RES_1_D(); void OP_CB_RES_1_E();
+    void OP_CB_RES_1_H(); void OP_CB_RES_1_L(); void OP_CB_RES_1_aHL(); void OP_CB_RES_1_A();
+    // Bit 2
+    void OP_CB_RES_2_B(); void OP_CB_RES_2_C(); void OP_CB_RES_2_D(); void OP_CB_RES_2_E();
+    void OP_CB_RES_2_H(); void OP_CB_RES_2_L(); void OP_CB_RES_2_aHL(); void OP_CB_RES_2_A();
+    // Bit 3
+    void OP_CB_RES_3_B(); void OP_CB_RES_3_C(); void OP_CB_RES_3_D(); void OP_CB_RES_3_E();
+    void OP_CB_RES_3_H(); void OP_CB_RES_3_L(); void OP_CB_RES_3_aHL(); void OP_CB_RES_3_A();
+    // Bit 4
+    void OP_CB_RES_4_B(); void OP_CB_RES_4_C(); void OP_CB_RES_4_D(); void OP_CB_RES_4_E();
+    void OP_CB_RES_4_H(); void OP_CB_RES_4_L(); void OP_CB_RES_4_aHL(); void OP_CB_RES_4_A();
+    // Bit 5
+    void OP_CB_RES_5_B(); void OP_CB_RES_5_C(); void OP_CB_RES_5_D(); void OP_CB_RES_5_E();
+    void OP_CB_RES_5_H(); void OP_CB_RES_5_L(); void OP_CB_RES_5_aHL(); void OP_CB_RES_5_A();
+    // Bit 6
+    void OP_CB_RES_6_B(); void OP_CB_RES_6_C(); void OP_CB_RES_6_D(); void OP_CB_RES_6_E();
+    void OP_CB_RES_6_H(); void OP_CB_RES_6_L(); void OP_CB_RES_6_aHL(); void OP_CB_RES_6_A();
+    // Bit 7
+    void OP_CB_RES_7_B(); void OP_CB_RES_7_C(); void OP_CB_RES_7_D(); void OP_CB_RES_7_E();
+    void OP_CB_RES_7_H(); void OP_CB_RES_7_L(); void OP_CB_RES_7_aHL(); void OP_CB_RES_7_A();
+
+    // =========================================================
+    // Opcodes CB: 0xC0 - 0xFF (Encender Bits - SET)
+    // =========================================================
+    // Bit 0
+    void OP_CB_SET_0_B(); void OP_CB_SET_0_C(); void OP_CB_SET_0_D(); void OP_CB_SET_0_E();
+    void OP_CB_SET_0_H(); void OP_CB_SET_0_L(); void OP_CB_SET_0_aHL(); void OP_CB_SET_0_A();
+    // Bit 1
+    void OP_CB_SET_1_B(); void OP_CB_SET_1_C(); void OP_CB_SET_1_D(); void OP_CB_SET_1_E();
+    void OP_CB_SET_1_H(); void OP_CB_SET_1_L(); void OP_CB_SET_1_aHL(); void OP_CB_SET_1_A();
+    // Bit 2
+    void OP_CB_SET_2_B(); void OP_CB_SET_2_C(); void OP_CB_SET_2_D(); void OP_CB_SET_2_E();
+    void OP_CB_SET_2_H(); void OP_CB_SET_2_L(); void OP_CB_SET_2_aHL(); void OP_CB_SET_2_A();
+    // Bit 3
+    void OP_CB_SET_3_B(); void OP_CB_SET_3_C(); void OP_CB_SET_3_D(); void OP_CB_SET_3_E();
+    void OP_CB_SET_3_H(); void OP_CB_SET_3_L(); void OP_CB_SET_3_aHL(); void OP_CB_SET_3_A();
+    // Bit 4
+    void OP_CB_SET_4_B(); void OP_CB_SET_4_C(); void OP_CB_SET_4_D(); void OP_CB_SET_4_E();
+    void OP_CB_SET_4_H(); void OP_CB_SET_4_L(); void OP_CB_SET_4_aHL(); void OP_CB_SET_4_A();
+    // Bit 5
+    void OP_CB_SET_5_B(); void OP_CB_SET_5_C(); void OP_CB_SET_5_D(); void OP_CB_SET_5_E();
+    void OP_CB_SET_5_H(); void OP_CB_SET_5_L(); void OP_CB_SET_5_aHL(); void OP_CB_SET_5_A();
+    // Bit 6
+    void OP_CB_SET_6_B(); void OP_CB_SET_6_C(); void OP_CB_SET_6_D(); void OP_CB_SET_6_E();
+    void OP_CB_SET_6_H(); void OP_CB_SET_6_L(); void OP_CB_SET_6_aHL(); void OP_CB_SET_6_A();
+    // Bit 7
+    void OP_CB_SET_7_B(); void OP_CB_SET_7_C(); void OP_CB_SET_7_D(); void OP_CB_SET_7_E();
+    void OP_CB_SET_7_H(); void OP_CB_SET_7_L(); void OP_CB_SET_7_aHL(); void OP_CB_SET_7_A();
 };

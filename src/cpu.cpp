@@ -422,6 +422,102 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     cb_instructions[0x7C] = { "BIT 7, H", &CPU::OP_CB_BIT_7_H, 8 }; cb_instructions[0x7D] = { "BIT 7, L", &CPU::OP_CB_BIT_7_L, 8 };
     cb_instructions[0x7E] = { "BIT 7, (HL)", &CPU::OP_CB_BIT_7_aHL, 12 }; cb_instructions[0x7F] = { "BIT 7, A", &CPU::OP_CB_BIT_7_A, 8 };
 
+    // --- Fila CB 0x80 (Bit 0) ---
+    cb_instructions[0x80] = { "RES 0, B", &CPU::OP_CB_RES_0_B, 8 }; cb_instructions[0x81] = { "RES 0, C", &CPU::OP_CB_RES_0_C, 8 };
+    cb_instructions[0x82] = { "RES 0, D", &CPU::OP_CB_RES_0_D, 8 }; cb_instructions[0x83] = { "RES 0, E", &CPU::OP_CB_RES_0_E, 8 };
+    cb_instructions[0x84] = { "RES 0, H", &CPU::OP_CB_RES_0_H, 8 }; cb_instructions[0x85] = { "RES 0, L", &CPU::OP_CB_RES_0_L, 8 };
+    cb_instructions[0x86] = { "RES 0, (HL)", &CPU::OP_CB_RES_0_aHL, 16 }; cb_instructions[0x87] = { "RES 0, A", &CPU::OP_CB_RES_0_A, 8 };
+
+    // --- Fila CB 0x88 (Bit 1) ---
+    cb_instructions[0x88] = { "RES 1, B", &CPU::OP_CB_RES_1_B, 8 }; cb_instructions[0x89] = { "RES 1, C", &CPU::OP_CB_RES_1_C, 8 };
+    cb_instructions[0x8A] = { "RES 1, D", &CPU::OP_CB_RES_1_D, 8 }; cb_instructions[0x8B] = { "RES 1, E", &CPU::OP_CB_RES_1_E, 8 };
+    cb_instructions[0x8C] = { "RES 1, H", &CPU::OP_CB_RES_1_H, 8 }; cb_instructions[0x8D] = { "RES 1, L", &CPU::OP_CB_RES_1_L, 8 };
+    cb_instructions[0x8E] = { "RES 1, (HL)", &CPU::OP_CB_RES_1_aHL, 16 }; cb_instructions[0x8F] = { "RES 1, A", &CPU::OP_CB_RES_1_A, 8 };
+
+    // --- Fila CB 0x90 (Bit 2) ---
+    cb_instructions[0x90] = { "RES 2, B", &CPU::OP_CB_RES_2_B, 8 }; cb_instructions[0x91] = { "RES 2, C", &CPU::OP_CB_RES_2_C, 8 };
+    cb_instructions[0x92] = { "RES 2, D", &CPU::OP_CB_RES_2_D, 8 }; cb_instructions[0x93] = { "RES 2, E", &CPU::OP_CB_RES_2_E, 8 };
+    cb_instructions[0x94] = { "RES 2, H", &CPU::OP_CB_RES_2_H, 8 }; cb_instructions[0x95] = { "RES 2, L", &CPU::OP_CB_RES_2_L, 8 };
+    cb_instructions[0x96] = { "RES 2, (HL)", &CPU::OP_CB_RES_2_aHL, 16 }; cb_instructions[0x97] = { "RES 2, A", &CPU::OP_CB_RES_2_A, 8 };
+
+    // --- Fila CB 0x98 (Bit 3) ---
+    cb_instructions[0x98] = { "RES 3, B", &CPU::OP_CB_RES_3_B, 8 }; cb_instructions[0x99] = { "RES 3, C", &CPU::OP_CB_RES_3_C, 8 };
+    cb_instructions[0x9A] = { "RES 3, D", &CPU::OP_CB_RES_3_D, 8 }; cb_instructions[0x9B] = { "RES 3, E", &CPU::OP_CB_RES_3_E, 8 };
+    cb_instructions[0x9C] = { "RES 3, H", &CPU::OP_CB_RES_3_H, 8 }; cb_instructions[0x9D] = { "RES 3, L", &CPU::OP_CB_RES_3_L, 8 };
+    cb_instructions[0x9E] = { "RES 3, (HL)", &CPU::OP_CB_RES_3_aHL, 16 }; cb_instructions[0x9F] = { "RES 3, A", &CPU::OP_CB_RES_3_A, 8 };
+
+    // --- Fila CB 0xA0 (Bit 4) ---
+    cb_instructions[0xA0] = { "RES 4, B", &CPU::OP_CB_RES_4_B, 8 }; cb_instructions[0xA1] = { "RES 4, C", &CPU::OP_CB_RES_4_C, 8 };
+    cb_instructions[0xA2] = { "RES 4, D", &CPU::OP_CB_RES_4_D, 8 }; cb_instructions[0xA3] = { "RES 4, E", &CPU::OP_CB_RES_4_E, 8 };
+    cb_instructions[0xA4] = { "RES 4, H", &CPU::OP_CB_RES_4_H, 8 }; cb_instructions[0xA5] = { "RES 4, L", &CPU::OP_CB_RES_4_L, 8 };
+    cb_instructions[0xA6] = { "RES 4, (HL)", &CPU::OP_CB_RES_4_aHL, 16 }; cb_instructions[0xA7] = { "RES 4, A", &CPU::OP_CB_RES_4_A, 8 };
+
+    // --- Fila CB 0xA8 (Bit 5) ---
+    cb_instructions[0xA8] = { "RES 5, B", &CPU::OP_CB_RES_5_B, 8 }; cb_instructions[0xA9] = { "RES 5, C", &CPU::OP_CB_RES_5_C, 8 };
+    cb_instructions[0xAA] = { "RES 5, D", &CPU::OP_CB_RES_5_D, 8 }; cb_instructions[0xAB] = { "RES 5, E", &CPU::OP_CB_RES_5_E, 8 };
+    cb_instructions[0xAC] = { "RES 5, H", &CPU::OP_CB_RES_5_H, 8 }; cb_instructions[0xAD] = { "RES 5, L", &CPU::OP_CB_RES_5_L, 8 };
+    cb_instructions[0xAE] = { "RES 5, (HL)", &CPU::OP_CB_RES_5_aHL, 16 }; cb_instructions[0xAF] = { "RES 5, A", &CPU::OP_CB_RES_5_A, 8 };
+
+    // --- Fila CB 0xB0 (Bit 6) ---
+    cb_instructions[0xB0] = { "RES 6, B", &CPU::OP_CB_RES_6_B, 8 }; cb_instructions[0xB1] = { "RES 6, C", &CPU::OP_CB_RES_6_C, 8 };
+    cb_instructions[0xB2] = { "RES 6, D", &CPU::OP_CB_RES_6_D, 8 }; cb_instructions[0xB3] = { "RES 6, E", &CPU::OP_CB_RES_6_E, 8 };
+    cb_instructions[0xB4] = { "RES 6, H", &CPU::OP_CB_RES_6_H, 8 }; cb_instructions[0xB5] = { "RES 6, L", &CPU::OP_CB_RES_6_L, 8 };
+    cb_instructions[0xB6] = { "RES 6, (HL)", &CPU::OP_CB_RES_6_aHL, 16 }; cb_instructions[0xB7] = { "RES 6, A", &CPU::OP_CB_RES_6_A, 8 };
+
+    // --- Fila CB 0xB8 (Bit 7) ---
+    cb_instructions[0xB8] = { "RES 7, B", &CPU::OP_CB_RES_7_B, 8 }; cb_instructions[0xB9] = { "RES 7, C", &CPU::OP_CB_RES_7_C, 8 };
+    cb_instructions[0xBA] = { "RES 7, D", &CPU::OP_CB_RES_7_D, 8 }; cb_instructions[0xBB] = { "RES 7, E", &CPU::OP_CB_RES_7_E, 8 };
+    cb_instructions[0xBC] = { "RES 7, H", &CPU::OP_CB_RES_7_H, 8 }; cb_instructions[0xBD] = { "RES 7, L", &CPU::OP_CB_RES_7_L, 8 };
+    cb_instructions[0xBE] = { "RES 7, (HL)", &CPU::OP_CB_RES_7_aHL, 16 }; cb_instructions[0xBF] = { "RES 7, A", &CPU::OP_CB_RES_7_A, 8 };
+
+    // --- Fila CB 0xC0 (Bit 0) ---
+    cb_instructions[0xC0] = { "SET 0, B", &CPU::OP_CB_SET_0_B, 8 }; cb_instructions[0xC1] = { "SET 0, C", &CPU::OP_CB_SET_0_C, 8 };
+    cb_instructions[0xC2] = { "SET 0, D", &CPU::OP_CB_SET_0_D, 8 }; cb_instructions[0xC3] = { "SET 0, E", &CPU::OP_CB_SET_0_E, 8 };
+    cb_instructions[0xC4] = { "SET 0, H", &CPU::OP_CB_SET_0_H, 8 }; cb_instructions[0xC5] = { "SET 0, L", &CPU::OP_CB_SET_0_L, 8 };
+    cb_instructions[0xC6] = { "SET 0, (HL)", &CPU::OP_CB_SET_0_aHL, 16 }; cb_instructions[0xC7] = { "SET 0, A", &CPU::OP_CB_SET_0_A, 8 };
+
+    // --- Fila CB 0xC8 (Bit 1) ---
+    cb_instructions[0xC8] = { "SET 1, B", &CPU::OP_CB_SET_1_B, 8 }; cb_instructions[0xC9] = { "SET 1, C", &CPU::OP_CB_SET_1_C, 8 };
+    cb_instructions[0xCA] = { "SET 1, D", &CPU::OP_CB_SET_1_D, 8 }; cb_instructions[0xCB] = { "SET 1, E", &CPU::OP_CB_SET_1_E, 8 };
+    cb_instructions[0xCC] = { "SET 1, H", &CPU::OP_CB_SET_1_H, 8 }; cb_instructions[0xCD] = { "SET 1, L", &CPU::OP_CB_SET_1_L, 8 };
+    cb_instructions[0xCE] = { "SET 1, (HL)", &CPU::OP_CB_SET_1_aHL, 16 }; cb_instructions[0xCF] = { "SET 1, A", &CPU::OP_CB_SET_1_A, 8 };
+
+    // --- Fila CB 0xD0 (Bit 2) ---
+    cb_instructions[0xD0] = { "SET 2, B", &CPU::OP_CB_SET_2_B, 8 }; cb_instructions[0xD1] = { "SET 2, C", &CPU::OP_CB_SET_2_C, 8 };
+    cb_instructions[0xD2] = { "SET 2, D", &CPU::OP_CB_SET_2_D, 8 }; cb_instructions[0xD3] = { "SET 2, E", &CPU::OP_CB_SET_2_E, 8 };
+    cb_instructions[0xD4] = { "SET 2, H", &CPU::OP_CB_SET_2_H, 8 }; cb_instructions[0xD5] = { "SET 2, L", &CPU::OP_CB_SET_2_L, 8 };
+    cb_instructions[0xD6] = { "SET 2, (HL)", &CPU::OP_CB_SET_2_aHL, 16 }; cb_instructions[0xD7] = { "SET 2, A", &CPU::OP_CB_SET_2_A, 8 };
+
+    // --- Fila CB 0xD8 (Bit 3) ---
+    cb_instructions[0xD8] = { "SET 3, B", &CPU::OP_CB_SET_3_B, 8 }; cb_instructions[0xD9] = { "SET 3, C", &CPU::OP_CB_SET_3_C, 8 };
+    cb_instructions[0xDA] = { "SET 3, D", &CPU::OP_CB_SET_3_D, 8 }; cb_instructions[0xDB] = { "SET 3, E", &CPU::OP_CB_SET_3_E, 8 };
+    cb_instructions[0xDC] = { "SET 3, H", &CPU::OP_CB_SET_3_H, 8 }; cb_instructions[0xDD] = { "SET 3, L", &CPU::OP_CB_SET_3_L, 8 };
+    cb_instructions[0xDE] = { "SET 3, (HL)", &CPU::OP_CB_SET_3_aHL, 16 }; cb_instructions[0xDF] = { "SET 3, A", &CPU::OP_CB_SET_3_A, 8 };
+
+    // --- Fila CB 0xE0 (Bit 4) ---
+    cb_instructions[0xE0] = { "SET 4, B", &CPU::OP_CB_SET_4_B, 8 }; cb_instructions[0xE1] = { "SET 4, C", &CPU::OP_CB_SET_4_C, 8 };
+    cb_instructions[0xE2] = { "SET 4, D", &CPU::OP_CB_SET_4_D, 8 }; cb_instructions[0xE3] = { "SET 4, E", &CPU::OP_CB_SET_4_E, 8 };
+    cb_instructions[0xE4] = { "SET 4, H", &CPU::OP_CB_SET_4_H, 8 }; cb_instructions[0xE5] = { "SET 4, L", &CPU::OP_CB_SET_4_L, 8 };
+    cb_instructions[0xE6] = { "SET 4, (HL)", &CPU::OP_CB_SET_4_aHL, 16 }; cb_instructions[0xE7] = { "SET 4, A", &CPU::OP_CB_SET_4_A, 8 };
+
+    // --- Fila CB 0xE8 (Bit 5) ---
+    cb_instructions[0xE8] = { "SET 5, B", &CPU::OP_CB_SET_5_B, 8 }; cb_instructions[0xE9] = { "SET 5, C", &CPU::OP_CB_SET_5_C, 8 };
+    cb_instructions[0xEA] = { "SET 5, D", &CPU::OP_CB_SET_5_D, 8 }; cb_instructions[0xEB] = { "SET 5, E", &CPU::OP_CB_SET_5_E, 8 };
+    cb_instructions[0xEC] = { "SET 5, H", &CPU::OP_CB_SET_5_H, 8 }; cb_instructions[0xED] = { "SET 5, L", &CPU::OP_CB_SET_5_L, 8 };
+    cb_instructions[0xEE] = { "SET 5, (HL)", &CPU::OP_CB_SET_5_aHL, 16 }; cb_instructions[0xEF] = { "SET 5, A", &CPU::OP_CB_SET_5_A, 8 };
+
+    // --- Fila CB 0xF0 (Bit 6) ---
+    cb_instructions[0xF0] = { "SET 6, B", &CPU::OP_CB_SET_6_B, 8 }; cb_instructions[0xF1] = { "SET 6, C", &CPU::OP_CB_SET_6_C, 8 };
+    cb_instructions[0xF2] = { "SET 6, D", &CPU::OP_CB_SET_6_D, 8 }; cb_instructions[0xF3] = { "SET 6, E", &CPU::OP_CB_SET_6_E, 8 };
+    cb_instructions[0xF4] = { "SET 6, H", &CPU::OP_CB_SET_6_H, 8 }; cb_instructions[0xF5] = { "SET 6, L", &CPU::OP_CB_SET_6_L, 8 };
+    cb_instructions[0xF6] = { "SET 6, (HL)", &CPU::OP_CB_SET_6_aHL, 16 }; cb_instructions[0xF7] = { "SET 6, A", &CPU::OP_CB_SET_6_A, 8 };
+
+    // --- Fila CB 0xF8 (Bit 7) ---
+    cb_instructions[0xF8] = { "SET 7, B", &CPU::OP_CB_SET_7_B, 8 }; cb_instructions[0xF9] = { "SET 7, C", &CPU::OP_CB_SET_7_C, 8 };
+    cb_instructions[0xFA] = { "SET 7, D", &CPU::OP_CB_SET_7_D, 8 }; cb_instructions[0xFB] = { "SET 7, E", &CPU::OP_CB_SET_7_E, 8 };
+    cb_instructions[0xFC] = { "SET 7, H", &CPU::OP_CB_SET_7_H, 8 }; cb_instructions[0xFD] = { "SET 7, L", &CPU::OP_CB_SET_7_L, 8 };
+    cb_instructions[0xFE] = { "SET 7, (HL)", &CPU::OP_CB_SET_7_aHL, 16 }; cb_instructions[0xFF] = { "SET 7, A", &CPU::OP_CB_SET_7_A, 8 };
+
 }
 
 void CPU::step() {
@@ -438,974 +534,6 @@ void CPU::step() {
     Instruction inst = instructions[opcode];
     cycles += inst.cycles;
     (this->*inst.operate)();
-}
-
-void CPU::step_OLD() {
-    // 0. Halt?
-    if (isHalted) {
-        // Si estamos en HALT, la CPU no hace nada, pero el reloj sigue corriendo.
-        // Consumimos 4 ciclos (1 ciclo de máquina) por "paso" de espera.
-        cycles += 4;
-        return; // No ejecutamos fetch/decode
-    }
-    // 1. Fetch
-    Byte opcode = fetchByte();
-
-    // 2. Decode & Execute
-    switch (opcode) {
-        // NOP
-        case 0x00:
-            cycles += 4;
-            break;
-        // LD BC, d16 (Opcode 01)
-        case 0x01:
-            setBC(fetchWord());
-            cycles += 12;
-            break;
-        case 0x05:
-            dec(B);
-            cycles += 4;
-            break;
-
-        // LD DE, d16 (Opcode 11)
-        case 0x11:
-            setDE(fetchWord());
-            cycles += 12;
-            break;
-            // LD (DE), A (Opcode 12)
-        case 0x12:
-            bus.write(getDE(), A);
-            cycles += 8;
-            break;
-            // INC DE (Opcode 13) - Incremento de 16 bits
-            // Igual que INC HL (23), NO afecta flags.
-        case 0x13:
-            setDE(getDE() + 1);
-            cycles += 8;
-            break;
-            // INC D (Opcode 14)
-        case 0x14:
-            inc(D);
-            cycles += 4;
-            break;
-
-            // INC E (Opcode 1C)
-        case 0x1C:
-            inc(E);
-            cycles += 4;
-            break;
-            // INC H (Opcode 24)
-        case 0x24:
-            inc(H);
-            cycles += 4;
-            break;
-
-            // INC L (Opcode 2C)
-        case 0x2C:
-            inc(L);
-            cycles += 4;
-            break;
-
-            // INC (HL) (Opcode 34) - Incremento de 8 bits en memoria
-        case 0x34:
-        {
-            // 1. Leer valor actual de memoria
-            Byte val = bus.read(getHL());
-
-            // 2. Incrementar (usamos tu helper que maneja Flags Z, N, H)
-            inc(val);
-
-            // 3. Escribir de vuelta
-            bus.write(getHL(), val);
-
-            cycles += 12;
-        }
-            break;
-
-            // LD A, E (Opcode 7B) - Copiar registro E en A
-        case 0x7B:
-            A = E;
-            cycles += 4;
-            break;
-
-            // CP d8 (Opcode FE) - Comparar A con un valor inmediato
-        case 0xFE:
-            cp(fetchByte()); // Leemos el siguiente byte y comparamos
-            cycles += 8;
-            break;
-
-        // LD C, d8 (Opcode 0E)
-        case 0x0E:
-            C = fetchByte();
-            cycles += 8;
-            break;
-        // INC B (Opcode 04)
-        case 0x04:
-            inc(B); // ¡Usa tu helper!
-            cycles += 4;
-            break;
-        // LD B, A (Opcode 47) - Copia A en B
-        case 0x47:
-            B = A;
-            cycles += 4;
-            break;
-
-        // LD (HL), A (Opcode 77) - Escribe A en la dirección de memoria HL
-        case 0x77:
-            bus.write(getHL(), A);
-            cycles += 8;
-            break;
-
-        // --- HIGH RAM & IO (Sonidos, Pantalla) ---
-        // LDH (a8), A (Opcode E0) -> Escribe en 0xFF00 + dato inmediato
-        case 0xE0:
-        {
-            Byte offset = fetchByte();
-            Word addr = 0xFF00 | offset; // 0xFF00 + offset
-            bus.write(addr, A);
-            cycles += 12;
-        }
-            break;
-
-        // LD (C), A (Opcode E2) -> Escribe en 0xFF00 + Registro C
-        // Nota: Aunque se escribe (C), la dirección real es FF00 + C
-        case 0xE2:
-        {
-            Word addr = 0xFF00 | C;
-            bus.write(addr, A);
-            cycles += 8;
-        }
-            break;
-        case 0x06:
-            B = fetchByte();
-            cycles += 8;
-            break;
-
-        case 0x3E:
-            A = fetchByte();
-            cycles += 8;
-            break;
-        case 0x80:
-            add(B);
-            cycles += 4;
-            break;
-        case 0xC3: {
-            Word targetAddress = fetchWord();
-            PC = targetAddress;
-            cycles += 16; // ~16/12 en documentacion
-        }
-            break;
-            // LD HL, d16 (Cargar valor de 16 bits en HL)
-        case 0x21:
-            setHL(fetchWord());
-            cycles += 12;
-            break;
-            // LD A, (HL+) (Opcode 2A) - Lee de (HL) y luego incrementa HL
-        case 0x2A:
-            A = bus.read(getHL());
-            setHL(getHL() + 1);
-            cycles += 8;
-            break;
-
-            // LD SP, d16 (Inicializar Stack Pointer)
-        case 0x31:
-            SP = fetchWord();
-            cycles += 12;
-            break;
-
-            // LD (HL-), A (Escribir A en (HL) y decrementar HL)
-        case 0x32:
-            bus.write(getHL(), A);
-            setHL(getHL() - 1); // Decrementamos después de escribir
-            cycles += 8;
-            break;
-
-            // XOR A (Opcode AF)
-            // Lógica: A = A ^ A (que es 0). Flags: Z=1.
-        case 0xAF:
-            A = A ^ A; // Obviamente 0, pero seguimos la lógica formal
-            setFlag(F_Z, true); // Resultado es cero
-            setFlag(F_N, false);
-            setFlag(F_H, false);
-            setFlag(F_C, false);
-            cycles += 4;
-            break;
-        case 0x0C: inc(C); cycles += 4; break;
-        case 0x20:
-        {
-            int8_t off = (int8_t)fetchByte();
-            if(!getFlag(F_Z)) { PC += off; cycles += 12; }
-            else { cycles += 8; }
-        }
-            break;
-
-            // EI (Enable Interrupts) - 0xFB
-            // Por ahora no tenemos interrupciones, pero la BIOS lo pide.
-        case 0xFB:
-            ime = true;
-            cycles += 4;
-            break;
-            // RLA (Opcode 17) - Rotate Left Accumulator
-        case 0x17:
-        {
-            // Usamos el helper rl(A) pero corregimos el flag Z
-            rl(A);
-            setFlag(F_Z, false); // ¡Regla especial de RLA!
-            cycles += 4;
-        }
-            break;
-
-        // LD C, A (Opcode 4F) - Copiar A en C
-        case 0x4F:
-            C = A;
-            cycles += 4;
-            break;
-
-        // POP BC (Opcode C1) - Sacar del Stack a BC
-        case 0xC1:
-            setBC(popStack());
-            cycles += 12;
-            break;
-
-        // PUSH BC (Opcode C5) - Guardar BC en el Stack
-        case 0xC5:
-            pushStack(getBC());
-            cycles += 16;
-            break;
-        case 0xCB:
-        {
-            Byte cbOp = fetchByte();
-            cycles += 4;
-            switch(cbOp) {
-                // RL C (Opcode 11 dentro de CB) -> Rotate Left C
-                case 0x11:
-                    rl(C);
-                    cycles += 8;
-                    break;
-
-                    // BIT 7, H (0x7C) que ya tenías...
-                case 0x7C: bit(7, H); cycles += 8; break;
-                    // RR C (CB 19)
-                case 0x19: rr(C); cycles += 8; break;
-                    // RR D (CB 1A)
-                case 0x1A: rr(D); cycles += 8; break;
-
-                    // SRL B (CB 38)
-                case 0x38: srl(B); cycles += 8; break;
-
-                default:
-                    //std::cout << std::format("Unimplemented CB: {:02X}\n", cbOp);
-                    std::string errCbOp = "Unimplemented CB: " + std::to_string(cbOp);
-                    throw std::runtime_error(errCbOp);
-            }
-        }
-            break;
-        // LD A, (DE) - Opcode 1A
-        // Lee el byte apuntado por el registro DE y lo guarda en A
-        case 0x1A:
-            A = bus.read(getDE());
-            cycles += 8;
-            break;
-
-        // SUB L - Opcode 95
-        // Resta el valor de L al registro A
-        case 0x95:
-            sub(L); // Usamos el helper
-            cycles += 4;
-            break;
-
-        // CALL a16 - Opcode CD
-        // Llama a una subrutina
-        case 0xCD:
-        {
-            // 1. Leemos la dirección de destino (donde queremos ir)
-            Word targetAddr = fetchWord();
-
-            // 2. Guardamos el PC actual en el Stack para saber volver.
-            // IMPORTANTE: El PC ya avanzó (gracias a fetchWord), así que
-            // guardamos la dirección de la SIGUIENTE instrucción.
-            pushStack(PC);
-
-            // 3. Saltamos
-            PC = targetAddr;
-
-            cycles += 24; // Call es costoso
-        }
-            break;
-            // RET (Opcode C9) - Return from Subroutine
-        case 0xC9:
-            PC = popStack(); // Recuperamos donde estábamos
-            cycles += 16;
-            break;
-            // LD (HL+), A (Opcode 22) - También llamada LDI (Load and Increment)
-        case 0x22:
-            bus.write(getHL(), A); // Escribir
-            setHL(getHL() + 1);    // Incrementar HL
-            cycles += 8;
-            break;
-            // INC HL (Opcode 23) - 16-bit Increment
-        case 0x23:
-            setHL(getHL() + 1); // Simple suma, SIN tocar flags
-            cycles += 8;
-            break;
-            // DEC C (Opcode 0D)
-        case 0x0D:
-            dec(C); // Helper con flags correctos
-            cycles += 4;
-            break;
-            // JR r8 (Opcode 18) - Salto Relativo Incondicional
-        case 0x18:
-        {
-            int8_t offset = (int8_t)fetchByte();
-            PC += offset;
-            cycles += 12;
-        }
-            break;
-
-            // JR Z, r8 (Opcode 28) - Salto si Z es 1
-        case 0x28:
-        {
-            int8_t offset = (int8_t)fetchByte();
-            if (getFlag(F_Z)) {
-                PC += offset;
-                cycles += 12;
-            } else {
-                cycles += 8;
-            }
-        }
-            break;
-            // LDH A, (a8) (Opcode F0) - Leer de 0xFF00 + n
-        case 0xF0:
-        {
-            Byte offset = fetchByte();
-            Word addr = 0xFF00 | offset;
-            A = bus.read(addr);
-            cycles += 12;
-        }
-            break;
-            // LD (a16), A (Opcode EA)
-        case 0xEA:
-        {
-            Word addr = fetchWord();
-            bus.write(addr, A);
-            cycles += 16;
-        }
-            break;
-            // SBC A, C (Opcode 99)
-        case 0x99:
-            sbc(C);
-            cycles += 4;
-            break;
-            // STOP (Opcode 10)
-        case 0x10:
-            fetchByte(); // Consumimos el byte extra (00) que sigue al STOP
-            // Aquí deberíamos pausar la CPU, pero por ahora...
-            std::cout << "STOP Instruction executed.\n";
-            cycles += 4;
-            break;
-            // DEC A (Opcode 3D)
-        case 0x3D:
-            dec(A);
-            cycles += 4;
-            break;
-            // LD H, A (Opcode 67) - Copia A en H
-        case 0x67:
-            H = A;
-            cycles += 4;
-            break;
-
-            // LD D, A (Opcode 57) - Copia A en D
-        case 0x57:
-            D = A;
-            cycles += 4;
-            break;
-            // LD E, d8 (Opcode 1E)
-        case 0x1E:
-            E = fetchByte();
-            cycles += 8;
-            break;
-            // LD (BC), A (Opcode 02)
-        case 0x02:
-            bus.write(getBC(), A);
-            cycles += 8;
-            break;
-            // LD L, d8 (Opcode 2E)
-        case 0x2E:
-            L = fetchByte();
-            cycles += 8;
-            break;
-            // RRCA (Opcode 0F) - Rotate Right Circular Accumulator
-        case 0x0F:
-        {
-            // 1. Guardamos el bit 0 (que se va a caer)
-            Byte bit0 = A & 0x01;
-
-            // 2. Rotamos: A >> 1 y metemos el bit0 en la posición 7
-            A = (A >> 1) | (bit0 << 7);
-
-            // 3. Flags (Truco: Z siempre false en RRCA)
-            setFlag(F_Z, false);
-            setFlag(F_N, false);
-            setFlag(F_H, false);
-            setFlag(F_C, bit0); // El bit que salió va al Carry
-
-            cycles += 4;
-        }
-            break;
-            // PUSH HL (Opcode E5)
-        case 0xE5:
-            pushStack(getHL());
-            cycles += 16;
-            break;
-
-            // POP HL (Opcode E1)
-        case 0xE1:
-            setHL(popStack());
-            cycles += 12;
-            break;
-
-            // PUSH AF (Opcode F5)
-        case 0xF5:
-            pushStack(getAF());
-            cycles += 16;
-            break;
-
-            // POP AF (Opcode F1)
-        case 0xF1:
-        {
-            Word af = popStack();
-            // LA CORRECCIÓN MÁGICA:
-            // Aseguramos que los 4 bits bajos de F (la parte baja de AF) sean 0.
-            // 0xFFF0 = 1111 1111 1111 0000
-            setAF(af & 0xFFF0);
-            cycles += 12;
-        }
-            break;
-            // LD A, B (Opcode 78)
-        case 0x78: A = B; cycles += 4; break;
-
-            // LD A, H (Opcode 7C)
-        case 0x7C: A = H; cycles += 4; break;
-
-            // LD A, L (Opcode 7D)
-        case 0x7D: A = L; cycles += 4; break;
-            // AND d8 (Opcode E6) - AND Inmediato
-        case 0xE6:
-            and_op(fetchByte());
-            cycles += 8;
-            break;
-
-            // OR C (Opcode B1) - OR con registro C
-        case 0xB1:
-            or_op(C);
-            cycles += 4;
-            break;
-            // RET C (Opcode D8) - Retorna si Carry es true
-        case 0xD8:
-            if (getFlag(F_C)) {
-                PC = popStack();
-                cycles += 20; // Tarda más si salta
-            } else {
-                cycles += 8;
-            }
-            break;
-            // LD A, (a16) (Opcode FA)
-        case 0xFA:
-        {
-            Word addr = fetchWord();
-            A = bus.read(addr);
-            cycles += 16;
-        }
-            break;
-            // DI (Opcode F3) - Disable Interrupts
-        case 0xF3:
-            ime = false;
-            cycles += 4;
-            break;
-
-            // INC BC (Opcode 03) - 16-bit Increment
-        case 0x03:
-            setBC(getBC() + 1);
-            cycles += 8;
-            break;
-
-            // CALL NZ, a16 (Opcode C4) - Llama si Z es 0
-        case 0xC4:
-        {
-            Word target = fetchWord();
-            if (!getFlag(F_Z)) {
-                pushStack(PC);
-                PC = target;
-                cycles += 24;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-
-            // CALL Z, a16 (Opcode CC) - Llama si Z es 1
-        case 0xCC:
-        {
-            Word target = fetchWord();
-            if (getFlag(F_Z)) {
-                pushStack(PC);
-                PC = target;
-                cycles += 24;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-
-            // CALL NC, a16 (Opcode D4) - Llama si C es 0
-        case 0xD4:
-        {
-            Word target = fetchWord();
-            if (!getFlag(F_C)) {
-                pushStack(PC);
-                PC = target;
-                cycles += 24;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-
-            // CALL C, a16 (Opcode DC) - Llama si C es 1
-        case 0xDC:
-        {
-            Word target = fetchWord();
-            if (getFlag(F_C)) {
-                pushStack(PC);
-                PC = target;
-                cycles += 24;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-            // RET NZ (Opcode C0) - Retorna si Z es 0
-        case 0xC0:
-            if (!getFlag(F_Z)) {
-                PC = popStack();
-                cycles += 20;
-            } else {
-                cycles += 8;
-            }
-            break;
-
-            // RET Z (Opcode C8) - Retorna si Z es 1
-        case 0xC8:
-            if (getFlag(F_Z)) {
-                PC = popStack();
-                cycles += 20;
-            } else {
-                cycles += 8;
-            }
-            break;
-
-            // RET NC (Opcode D0) - Retorna si C es 0
-        case 0xD0:
-            if (!getFlag(F_C)) {
-                PC = popStack();
-                cycles += 20;
-            } else {
-                cycles += 8;
-            }
-            break;
-            // DAA (Opcode 27) - Decimal Adjust Accumulator
-        case 0x27:
-            daa();
-            cycles += 4;
-            break;
-            // CPL (Opcode 2F) - Complement A (Flip bits)
-        case 0x2F:
-            A = ~A;
-            setFlag(F_N, true);
-            setFlag(F_H, true);
-            cycles += 4;
-            break;
-
-            // SCF (Opcode 37) - Set Carry Flag
-        case 0x37:
-            setFlag(F_N, false);
-            setFlag(F_H, false);
-            setFlag(F_C, true);
-            cycles += 4;
-            break;
-
-            // CCF (Opcode 3F) - Complement Carry Flag
-        case 0x3F:
-            setFlag(F_N, false);
-            setFlag(F_H, false);
-            setFlag(F_C, !getFlag(F_C)); // Invertimos C
-            cycles += 4;
-            break;
-            // XOR C (Opcode A9)
-        case 0xA9:
-            xor_op(C);
-            cycles += 4;
-            break;
-            // ADD A, d8 (Opcode C6)
-        case 0xC6:
-            add(fetchByte());
-            cycles += 8;
-            break;
-
-            // SUB d8 (Opcode D6)
-        case 0xD6:
-            sub(fetchByte());
-            cycles += 8;
-            break;
-            // OR A (Opcode B7)
-        case 0xB7:
-            or_op(A);
-            cycles += 4;
-            break;
-            // JP (HL) (Opcode E9) - PC = HL
-        case 0xE9:
-            PC = getHL();
-            cycles += 4;
-            break;
-            // RRA (Opcode 1F) - Rotate Right Accumulator
-        case 0x1F:
-            rr(A);
-            setFlag(F_Z, false); // ¡Regla especial de RRA! Z siempre 0
-            cycles += 4;
-            break;
-            // LD (a16), SP (Opcode 08) - Guarda el Stack Pointer en memoria
-        case 0x08:
-        {
-            Word addr = fetchWord();
-            // Game Boy es Little Endian: Primero byte bajo, luego alto
-            bus.write(addr, SP & 0xFF);
-            bus.write(addr + 1, (SP >> 8) & 0xFF);
-            cycles += 20;
-        }
-            break;
-
-            // PUSH DE (Opcode D5)
-        case 0xD5:
-            pushStack(getDE());
-            cycles += 16;
-            break;
-
-            // LD B, (HL) (Opcode 46)
-        case 0x46:
-            B = bus.read(getHL());
-            cycles += 8;
-            break;
-
-            // LD C, (HL) (Opcode 4E)
-        case 0x4E:
-            C = bus.read(getHL());
-            cycles += 8;
-            break;
-
-            // LD D, (HL) (Opcode 56)
-        case 0x56:
-            D = bus.read(getHL());
-            cycles += 8;
-            break;
-
-            // LD H, d8 (Opcode 26)
-        case 0x26:
-            H = fetchByte();
-            cycles += 8;
-            break;
-
-            // LD A, (BC) (Opcode 0A)
-        case 0x0A:
-            A = bus.read(getBC());
-            cycles += 8;
-            break;
-            // XOR (HL) (Opcode AE)
-        case 0xAE:
-            xor_op(bus.read(getHL()));
-            cycles += 8;
-            break;
-
-            // XOR d8 (Opcode EE)
-        case 0xEE:
-            xor_op(fetchByte());
-            cycles += 8;
-            break;
-
-            // DEC L (Opcode 2D)
-        case 0x2D:
-            dec(L);
-            cycles += 4;
-            break;
-
-            // ADD A, E (Opcode 83)
-        case 0x83:
-            add(E);
-            cycles += 4;
-            break;
-
-            // CP B (Opcode B8)
-        case 0xB8:
-            cp(B);
-            cycles += 4;
-            break;
-            // JR NC, r8 (Opcode 30) - Salto si No Carry
-        case 0x30:
-        {
-            int8_t offset = (int8_t)fetchByte();
-            if (!getFlag(F_C)) {
-                PC += offset;
-                cycles += 12;
-            } else {
-                cycles += 8;
-            }
-        }
-            break;
-            // LD E, A (Opcode 5F)
-        case 0x5F:
-            E = A;
-            cycles += 4;
-            break;
-
-            // LD A, C (Opcode 79)
-        case 0x79:
-            A = C;
-            cycles += 4;
-            break;
-
-            // LD A, D (Opcode 7A)
-        case 0x7A:
-            A = D;
-            cycles += 4;
-            break;
-            // DEC H (Opcode 25)
-        case 0x25:
-            dec(H);
-            cycles += 4;
-            break;
-            // LD (HL), B (Opcode 70)
-        case 0x70:
-            bus.write(getHL(), B);
-            cycles += 8;
-            break;
-
-            // LD (HL), C (Opcode 71)
-        case 0x71:
-            bus.write(getHL(), C);
-            cycles += 8;
-            break;
-
-            // LD (HL), D (Opcode 72)
-        case 0x72:
-            bus.write(getHL(), D);
-            cycles += 8;
-            break;
-            // POP DE (Opcode D1)
-        case 0xD1:
-            setDE(popStack());
-            cycles += 12;
-            break;
-            // ADC A, d8 (Opcode CE)
-        case 0xCE:
-            adc(fetchByte());
-            cycles += 8;
-            break;
-            // ADD HL, HL (Opcode 29)
-        case 0x29:
-            addHL(getHL());
-            cycles += 8;
-            break;
-
-            // DEC (HL) (Opcode 35)
-        case 0x35:
-        {
-            // Read-Modify-Write
-            Byte val = bus.read(getHL());
-            dec(val); // Helper que maneja flags Z, N, H
-            bus.write(getHL(), val);
-            cycles += 12;
-        }
-            break;
-
-            // OR (HL) (Opcode B6)
-        case 0xB6:
-            or_op(bus.read(getHL()));
-            cycles += 8;
-            break;
-
-            // LD L, (HL) (Opcode 6E)
-        case 0x6E:
-            L = bus.read(getHL());
-            cycles += 8;
-            break;
-
-            // LD L, A (Opcode 6F)
-        case 0x6F:
-            L = A;
-            cycles += 4;
-            break;
-
-            // DEC E (Opcode 1D)
-        case 0x1D:
-            dec(E);
-            cycles += 4;
-            break;
-            // INC A (Opcode 3C)
-        case 0x3C:
-            inc(A);
-            cycles += 4;
-            break;
-            // CP C (Opcode B9)
-        case 0xB9:
-            cp(C);
-            cycles += 4;
-            break;
-            // JP NZ, a16 (Opcode C2) - Salta a dirección absoluta si Z es 0
-        case 0xC2:
-        {
-            Word target = fetchWord(); // Leemos la dirección de 16 bits
-            if (!getFlag(F_Z)) {
-                PC = target;       // Salto absoluto
-                cycles += 16;      // Tarda más si salta
-            } else {
-                cycles += 12;      // Tarda menos si no salta
-            }
-        }
-            break;
-            // CP E (Opcode BB)
-        case 0xBB:
-            cp(E);
-            cycles += 4;
-            break;
-            // LD A, (HL) (Opcode 7E)
-        case 0x7E:
-            A = bus.read(getHL());
-            cycles += 8;
-            break;
-
-            // JR C, r8 (Opcode 38) - Salto si Carry es 1
-        case 0x38:
-        {
-            int8_t offset = (int8_t)fetchByte();
-            if (getFlag(F_C)) {
-                PC += offset;
-                cycles += 12;
-            } else {
-                cycles += 8;
-            }
-        }
-            break;
-
-            // DEC BC (Opcode 0B)
-        case 0x0B:
-            setBC(getBC() - 1);
-            cycles += 8;
-            break;
-            // SUB C (Opcode 91)
-        case 0x91:
-            sub(C);
-            cycles += 4;
-            break;
-
-            // ADD A, C (Opcode 81)
-        case 0x81:
-            add(C);
-            cycles += 4;
-            break;
-
-            // CP D (Opcode BA)
-        case 0xBA:
-            cp(D);
-            cycles += 4;
-            break;
-            // LD HL, SP+r8 (Opcode F8)
-        case 0xF8:
-        {
-            // Leemos el desplazamiento con signo (-128 a 127)
-            int8_t offset = (int8_t)fetchByte();
-
-            // Calculamos el resultado final
-            int result = SP + offset;
-
-            // Flags
-            setFlag(F_Z, false); // Z siempre 0 en esta instrucción
-            setFlag(F_N, false); // N siempre 0
-
-            // Flag H: Acarreo del bit 3 (como si sumáramos solo bytes)
-            // ((SP & 0x0F) + (offset & 0x0F)) > 0x0F
-            setFlag(F_H, ((SP & 0x0F) + (offset & 0x0F)) > 0x0F);
-
-            // Flag C: Acarreo del bit 7 (overflow del byte bajo)
-            // ((SP & 0xFF) + (offset & 0xFF)) > 0xFF
-            setFlag(F_C, ((SP & 0xFF) + (offset & 0xFF)) > 0xFF);
-
-            setHL((Word)result);
-            cycles += 12;
-        }
-            break;
-            // JP Z, a16 (Opcode CA) - Salta si Z es 1
-        case 0xCA:
-        {
-            Word target = fetchWord();
-            if (getFlag(F_Z)) {
-                PC = target;
-                cycles += 16;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-
-            // JP NC, a16 (Opcode D2) - Salta si C es 0
-        case 0xD2:
-        {
-            Word target = fetchWord();
-            if (!getFlag(F_C)) {
-                PC = target;
-                cycles += 16;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-
-            // JP C, a16 (Opcode DA) - Salta si C es 1
-        case 0xDA:
-        {
-            Word target = fetchWord();
-            if (getFlag(F_C)) {
-                PC = target;
-                cycles += 16;
-            } else {
-                cycles += 12;
-            }
-        }
-            break;
-            // HALT (Opcode 76) - Pausa la CPU hasta una interrupción
-            // HALT (Opcode 76)
-        case 0x76:
-        {
-            // Leemos IE e IF para ver si ya hay una interrupción pendiente
-            Byte IE = bus.read(0xFFFF);
-            Byte IF = bus.read(0xFF0F);
-
-            // Si hay una interrupción pendiente (y habilitada en IE),
-            // HALT no surte efecto (bug del hardware, o simplemente no se duerme).
-            if ((IE & IF & 0x1F) != 0) {
-                // HALT Bug: En hardware real, esto causa que la siguiente
-                // instrucción se lea dos veces. Para emulación simple,
-                // basta con NO activar isHalted.
-            } else {
-                // Si no hay nada pendiente, a dormir.
-                isHalted = true;
-            }
-        }
-            cycles += 4;
-            break;
-
-        default:
-            //printf("Unhandled opcode: %02x\n", opcode);
-            throw std::runtime_error("Unhandled Opcode ejecutado!");
-    }
 }
 
 void CPU::reset() {
@@ -1474,6 +602,16 @@ void CPU::bit(Byte regVal, int bitIndex) {
     setFlag(F_N, false);
     setFlag(F_H, true); // BIT siempre enciende H
     // C no se toca
+}
+
+// Apagar un bit
+void CPU::res(int bitIndex, Byte& regVal) {
+    regVal &= ~(1 << bitIndex);
+}
+
+// Encender un bit
+void CPU::set(int bitIndex, Byte& regVal) {
+    regVal |= (1 << bitIndex);
 }
 
 void CPU::sub(Byte value) {
@@ -1692,7 +830,7 @@ void CPU::srl(Byte& reg) {
 
 // Shift left arithmetic
 void CPU::sla(Byte &reg) {
-    const bool isCarry = (reg && 0x80) >> 7 == 1;
+    const bool isCarry = (reg & 0x80) != 0;
 
     reg <<= 1;
 
@@ -1704,8 +842,8 @@ void CPU::sla(Byte &reg) {
 
 // Shift right arithmetic
 void CPU::sra(Byte &reg) {
-    const bool isCarry = (reg && 0x01) == 1;
-    const Byte sign = (reg && 0x80);
+    const bool isCarry = (reg & 0x01) != 0;
+    const Byte sign = (reg & 0x80);
 
     reg = (reg >> 1) | sign;
 
@@ -1826,8 +964,14 @@ void CPU::handleInterrupts() {
 // ========= Nueva tabla ========= //
 
 void CPU::OP_UNKNOWN() {
-    PC--;
-    step_OLD();
+    // Recolectar el op error
+    PC--; 
+    Byte illegalOpcode = bus.read(PC);
+    
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "Opcode Ilegal o Desconocido: 0x%02X en PC: 0x%04X", illegalOpcode, PC);
+    
+    throw std::runtime_error(buffer);
 }
 
 // =========================================================
@@ -2373,10 +1517,13 @@ void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }
 // ======================== FUNCIONES PREFIX CB =================================//
 
 void CPU::OP_UNKNOWN_CB() {
-    // Rebobinamos 2 bytes: el opcode CB específico (ej. 0x00) y el prefijo 0xCB
     PC -= 2; 
-    cycles-=4;
-    step_OLD();
+    Byte cbOpcode = bus.read(PC + 1);
+    
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "Opcode CB no mapeado en el emulador: CB %02X en PC: 0x%04X", cbOpcode, PC);
+    
+    throw std::runtime_error(buffer);
 }
 
 void CPU::OP_PREFIX_CB() {
@@ -2555,3 +1702,99 @@ void CPU::OP_CB_BIT_7_B() { bit(B, 7); } void CPU::OP_CB_BIT_7_C() { bit(C, 7); 
 void CPU::OP_CB_BIT_7_D() { bit(D, 7); } void CPU::OP_CB_BIT_7_E() { bit(E, 7); }
 void CPU::OP_CB_BIT_7_H() { bit(H, 7); } void CPU::OP_CB_BIT_7_L() { bit(L, 7); }
 void CPU::OP_CB_BIT_7_aHL() { bit(bus.read(getHL()), 7); } void CPU::OP_CB_BIT_7_A() { bit(A, 7); }
+
+// =========================================================
+// Opcodes CB: 0x80 - 0x8F (Bits 0 y 1)
+// =========================================================
+void CPU::OP_CB_RES_0_B() { res(0, B); } void CPU::OP_CB_RES_0_C() { res(0, C); }
+void CPU::OP_CB_RES_0_D() { res(0, D); } void CPU::OP_CB_RES_0_E() { res(0, E); }
+void CPU::OP_CB_RES_0_H() { res(0, H); } void CPU::OP_CB_RES_0_L() { res(0, L); }
+void CPU::OP_CB_RES_0_aHL() { Byte val = bus.read(getHL()); res(0, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_0_A() { res(0, A); }
+
+void CPU::OP_CB_RES_1_B() { res(1, B); } void CPU::OP_CB_RES_1_C() { res(1, C); }
+void CPU::OP_CB_RES_1_D() { res(1, D); } void CPU::OP_CB_RES_1_E() { res(1, E); }
+void CPU::OP_CB_RES_1_H() { res(1, H); } void CPU::OP_CB_RES_1_L() { res(1, L); }
+void CPU::OP_CB_RES_1_aHL() { Byte val = bus.read(getHL()); res(1, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_1_A() { res(1, A); }
+
+// =========================================================
+// Opcodes CB: 0x90 - 0x9F (Bits 2 y 3)
+// =========================================================
+void CPU::OP_CB_RES_2_B() { res(2, B); } void CPU::OP_CB_RES_2_C() { res(2, C); }
+void CPU::OP_CB_RES_2_D() { res(2, D); } void CPU::OP_CB_RES_2_E() { res(2, E); }
+void CPU::OP_CB_RES_2_H() { res(2, H); } void CPU::OP_CB_RES_2_L() { res(2, L); }
+void CPU::OP_CB_RES_2_aHL() { Byte val = bus.read(getHL()); res(2, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_2_A() { res(2, A); }
+
+void CPU::OP_CB_RES_3_B() { res(3, B); } void CPU::OP_CB_RES_3_C() { res(3, C); }
+void CPU::OP_CB_RES_3_D() { res(3, D); } void CPU::OP_CB_RES_3_E() { res(3, E); }
+void CPU::OP_CB_RES_3_H() { res(3, H); } void CPU::OP_CB_RES_3_L() { res(3, L); }
+void CPU::OP_CB_RES_3_aHL() { Byte val = bus.read(getHL()); res(3, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_3_A() { res(3, A); }
+
+// =========================================================
+// Opcodes CB: 0xA0 - 0xAF (Bits 4 y 5)
+// =========================================================
+void CPU::OP_CB_RES_4_B() { res(4, B); } void CPU::OP_CB_RES_4_C() { res(4, C); }
+void CPU::OP_CB_RES_4_D() { res(4, D); } void CPU::OP_CB_RES_4_E() { res(4, E); }
+void CPU::OP_CB_RES_4_H() { res(4, H); } void CPU::OP_CB_RES_4_L() { res(4, L); }
+void CPU::OP_CB_RES_4_aHL() { Byte val = bus.read(getHL()); res(4, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_4_A() { res(4, A); }
+
+void CPU::OP_CB_RES_5_B() { res(5, B); } void CPU::OP_CB_RES_5_C() { res(5, C); }
+void CPU::OP_CB_RES_5_D() { res(5, D); } void CPU::OP_CB_RES_5_E() { res(5, E); }
+void CPU::OP_CB_RES_5_H() { res(5, H); } void CPU::OP_CB_RES_5_L() { res(5, L); }
+void CPU::OP_CB_RES_5_aHL() { Byte val = bus.read(getHL()); res(5, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_5_A() { res(5, A); }
+
+// =========================================================
+// Opcodes CB: 0xB0 - 0xBF (Bits 6 y 7)
+// =========================================================
+void CPU::OP_CB_RES_6_B() { res(6, B); } void CPU::OP_CB_RES_6_C() { res(6, C); }
+void CPU::OP_CB_RES_6_D() { res(6, D); } void CPU::OP_CB_RES_6_E() { res(6, E); }
+void CPU::OP_CB_RES_6_H() { res(6, H); } void CPU::OP_CB_RES_6_L() { res(6, L); }
+void CPU::OP_CB_RES_6_aHL() { Byte val = bus.read(getHL()); res(6, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_6_A() { res(6, A); }
+
+void CPU::OP_CB_RES_7_B() { res(7, B); } void CPU::OP_CB_RES_7_C() { res(7, C); }
+void CPU::OP_CB_RES_7_D() { res(7, D); } void CPU::OP_CB_RES_7_E() { res(7, E); }
+void CPU::OP_CB_RES_7_H() { res(7, H); } void CPU::OP_CB_RES_7_L() { res(7, L); }
+void CPU::OP_CB_RES_7_aHL() { Byte val = bus.read(getHL()); res(7, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_7_A() { res(7, A); }
+
+
+// =========================================================
+// Opcodes CB: 0xC0 - 0xCF (Bits 0 y 1)
+// =========================================================
+void CPU::OP_CB_SET_0_B() { set(0, B); } void CPU::OP_CB_SET_0_C() { set(0, C); }
+void CPU::OP_CB_SET_0_D() { set(0, D); } void CPU::OP_CB_SET_0_E() { set(0, E); }
+void CPU::OP_CB_SET_0_H() { set(0, H); } void CPU::OP_CB_SET_0_L() { set(0, L); }
+void CPU::OP_CB_SET_0_aHL() { Byte val = bus.read(getHL()); set(0, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_0_A() { set(0, A); }
+
+void CPU::OP_CB_SET_1_B() { set(1, B); } void CPU::OP_CB_SET_1_C() { set(1, C); }
+void CPU::OP_CB_SET_1_D() { set(1, D); } void CPU::OP_CB_SET_1_E() { set(1, E); }
+void CPU::OP_CB_SET_1_H() { set(1, H); } void CPU::OP_CB_SET_1_L() { set(1, L); }
+void CPU::OP_CB_SET_1_aHL() { Byte val = bus.read(getHL()); set(1, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_1_A() { set(1, A); }
+
+void CPU::OP_CB_SET_2_B() { set(2, B); } void CPU::OP_CB_SET_2_C() { set(2, C); }
+void CPU::OP_CB_SET_2_D() { set(2, D); } void CPU::OP_CB_SET_2_E() { set(2, E); }
+void CPU::OP_CB_SET_2_H() { set(2, H); } void CPU::OP_CB_SET_2_L() { set(2, L); }
+void CPU::OP_CB_SET_2_aHL() { Byte val = bus.read(getHL()); set(2, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_2_A() { set(2, A); }
+
+void CPU::OP_CB_SET_3_B() { set(3, B); } void CPU::OP_CB_SET_3_C() { set(3, C); }
+void CPU::OP_CB_SET_3_D() { set(3, D); } void CPU::OP_CB_SET_3_E() { set(3, E); }
+void CPU::OP_CB_SET_3_H() { set(3, H); } void CPU::OP_CB_SET_3_L() { set(3, L); }
+void CPU::OP_CB_SET_3_aHL() { Byte val = bus.read(getHL()); set(3, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_3_A() { set(3, A); }
+
+void CPU::OP_CB_SET_4_B() { set(4, B); } void CPU::OP_CB_SET_4_C() { set(4, C); }
+void CPU::OP_CB_SET_4_D() { set(4, D); } void CPU::OP_CB_SET_4_E() { set(4, E); }
+void CPU::OP_CB_SET_4_H() { set(4, H); } void CPU::OP_CB_SET_4_L() { set(4, L); }
+void CPU::OP_CB_SET_4_aHL() { Byte val = bus.read(getHL()); set(4, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_4_A() { set(4, A); }
+
+void CPU::OP_CB_SET_5_B() { set(5, B); } void CPU::OP_CB_SET_5_C() { set(5, C); }
+void CPU::OP_CB_SET_5_D() { set(5, D); } void CPU::OP_CB_SET_5_E() { set(5, E); }
+void CPU::OP_CB_SET_5_H() { set(5, H); } void CPU::OP_CB_SET_5_L() { set(5, L); }
+void CPU::OP_CB_SET_5_aHL() { Byte val = bus.read(getHL()); set(5, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_5_A() { set(5, A); }
+
+void CPU::OP_CB_SET_6_B() { set(6, B); } void CPU::OP_CB_SET_6_C() { set(6, C); }
+void CPU::OP_CB_SET_6_D() { set(6, D); } void CPU::OP_CB_SET_6_E() { set(6, E); }
+void CPU::OP_CB_SET_6_H() { set(6, H); } void CPU::OP_CB_SET_6_L() { set(6, L); }
+void CPU::OP_CB_SET_6_aHL() { Byte val = bus.read(getHL()); set(6, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_6_A() { set(6, A); }
+
+void CPU::OP_CB_SET_7_B() { set(7, B); } void CPU::OP_CB_SET_7_C() { set(7, C); }
+void CPU::OP_CB_SET_7_D() { set(7, D); } void CPU::OP_CB_SET_7_E() { set(7, E); }
+void CPU::OP_CB_SET_7_H() { set(7, H); } void CPU::OP_CB_SET_7_L() { set(7, L); }
+void CPU::OP_CB_SET_7_aHL() { Byte val = bus.read(getHL()); set(7, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_7_A() { set(7, A); }

@@ -43,7 +43,7 @@ int main () {
         cpu.PC = 0x0100; // Inicio del juego
 
         bool testFinished = false;
-        long long maxCycles = 50000000;
+        long long maxCycles = 2000000000;
 
         std::cout << "==== TEST " << rom << " ====\n";
 
@@ -68,6 +68,9 @@ int main () {
                 } 
                 else if (output.find("Failed") != std::string::npos) {
                     std::cout << "\n[RESULTADO]: ❌ FAILED\n";
+                    std::cout << "--- REPORTE DE BLARGG ---\n";
+                    std::cout << output << "\n";
+                    std::cout << "-------------------------\n";
                     testFinished = true;
                 }
             }
