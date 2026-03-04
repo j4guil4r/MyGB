@@ -88,12 +88,13 @@ private:
     Word popStack();
 
     // Bits / Rotaciones
-    void bit(int bitIndex, Byte regVal);
+    void bit(Byte regVal, int bitIndex);
     void rl(Byte& reg);
     void rr(Byte &reg);
     void srl(Byte &reg);
     void sla(Byte &reg);
     void sra(Byte &reg);
+    void swap(Byte &reg);
     void daa();
     void rlc(Byte &reg, bool setZeroFlag);
     void rrc(Byte &reg, bool setZeroFlag);
@@ -467,4 +468,53 @@ private:
     void OP_CB_SRA_L();   // 0x2D
     void OP_CB_SRA_aHL(); // 0x2E
     void OP_CB_SRA_A();   // 0x2F
+
+    // =========================================================
+    // Opcodes CB: 0x30 - 0x3F (SWAP y Shift Right Logical)
+    // =========================================================
+    void OP_CB_SWAP_B();   // 0x30
+    void OP_CB_SWAP_C();   // 0x31
+    void OP_CB_SWAP_D();   // 0x32
+    void OP_CB_SWAP_E();   // 0x33
+    void OP_CB_SWAP_H();   // 0x34
+    void OP_CB_SWAP_L();   // 0x35
+    void OP_CB_SWAP_aHL(); // 0x36
+    void OP_CB_SWAP_A();   // 0x37
+
+    void OP_CB_SRL_B();    // 0x38
+    void OP_CB_SRL_C();    // 0x39
+    void OP_CB_SRL_D();    // 0x3A
+    void OP_CB_SRL_E();    // 0x3B
+    void OP_CB_SRL_H();    // 0x3C
+    void OP_CB_SRL_L();    // 0x3D
+    void OP_CB_SRL_aHL();  // 0x3E
+    void OP_CB_SRL_A();    // 0x3F
+
+    // =========================================================
+    // Opcodes CB: 0x40 - 0x7F (Comprobación de Bits - BIT)
+    // =========================================================
+    // Bit 0
+    void OP_CB_BIT_0_B(); void OP_CB_BIT_0_C(); void OP_CB_BIT_0_D(); void OP_CB_BIT_0_E();
+    void OP_CB_BIT_0_H(); void OP_CB_BIT_0_L(); void OP_CB_BIT_0_aHL(); void OP_CB_BIT_0_A();
+    // Bit 1
+    void OP_CB_BIT_1_B(); void OP_CB_BIT_1_C(); void OP_CB_BIT_1_D(); void OP_CB_BIT_1_E();
+    void OP_CB_BIT_1_H(); void OP_CB_BIT_1_L(); void OP_CB_BIT_1_aHL(); void OP_CB_BIT_1_A();
+    // Bit 2
+    void OP_CB_BIT_2_B(); void OP_CB_BIT_2_C(); void OP_CB_BIT_2_D(); void OP_CB_BIT_2_E();
+    void OP_CB_BIT_2_H(); void OP_CB_BIT_2_L(); void OP_CB_BIT_2_aHL(); void OP_CB_BIT_2_A();
+    // Bit 3
+    void OP_CB_BIT_3_B(); void OP_CB_BIT_3_C(); void OP_CB_BIT_3_D(); void OP_CB_BIT_3_E();
+    void OP_CB_BIT_3_H(); void OP_CB_BIT_3_L(); void OP_CB_BIT_3_aHL(); void OP_CB_BIT_3_A();
+    // Bit 4
+    void OP_CB_BIT_4_B(); void OP_CB_BIT_4_C(); void OP_CB_BIT_4_D(); void OP_CB_BIT_4_E();
+    void OP_CB_BIT_4_H(); void OP_CB_BIT_4_L(); void OP_CB_BIT_4_aHL(); void OP_CB_BIT_4_A();
+    // Bit 5
+    void OP_CB_BIT_5_B(); void OP_CB_BIT_5_C(); void OP_CB_BIT_5_D(); void OP_CB_BIT_5_E();
+    void OP_CB_BIT_5_H(); void OP_CB_BIT_5_L(); void OP_CB_BIT_5_aHL(); void OP_CB_BIT_5_A();
+    // Bit 6
+    void OP_CB_BIT_6_B(); void OP_CB_BIT_6_C(); void OP_CB_BIT_6_D(); void OP_CB_BIT_6_E();
+    void OP_CB_BIT_6_H(); void OP_CB_BIT_6_L(); void OP_CB_BIT_6_aHL(); void OP_CB_BIT_6_A();
+    // Bit 7
+    void OP_CB_BIT_7_B(); void OP_CB_BIT_7_C(); void OP_CB_BIT_7_D(); void OP_CB_BIT_7_E();
+    void OP_CB_BIT_7_H(); void OP_CB_BIT_7_L(); void OP_CB_BIT_7_aHL(); void OP_CB_BIT_7_A();
 };

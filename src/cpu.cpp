@@ -355,6 +355,73 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     cb_instructions[0x2E] = { "SRA (HL)", &CPU::OP_CB_SRA_aHL, 16 };
     cb_instructions[0x2F] = { "SRA A",    &CPU::OP_CB_SRA_A,   8  };
 
+    // --- Fila CB 0x30 ---
+    cb_instructions[0x30] = { "SWAP B",    &CPU::OP_CB_SWAP_B,   8  };
+    cb_instructions[0x31] = { "SWAP C",    &CPU::OP_CB_SWAP_C,   8  };
+    cb_instructions[0x32] = { "SWAP D",    &CPU::OP_CB_SWAP_D,   8  };
+    cb_instructions[0x33] = { "SWAP E",    &CPU::OP_CB_SWAP_E,   8  };
+    cb_instructions[0x34] = { "SWAP H",    &CPU::OP_CB_SWAP_H,   8  };
+    cb_instructions[0x35] = { "SWAP L",    &CPU::OP_CB_SWAP_L,   8  };
+    cb_instructions[0x36] = { "SWAP (HL)", &CPU::OP_CB_SWAP_aHL, 16 };
+    cb_instructions[0x37] = { "SWAP A",    &CPU::OP_CB_SWAP_A,   8  };
+
+    cb_instructions[0x38] = { "SRL B",     &CPU::OP_CB_SRL_B,    8  };
+    cb_instructions[0x39] = { "SRL C",     &CPU::OP_CB_SRL_C,    8  };
+    cb_instructions[0x3A] = { "SRL D",     &CPU::OP_CB_SRL_D,    8  };
+    cb_instructions[0x3B] = { "SRL E",     &CPU::OP_CB_SRL_E,    8  };
+    cb_instructions[0x3C] = { "SRL H",     &CPU::OP_CB_SRL_H,    8  };
+    cb_instructions[0x3D] = { "SRL L",     &CPU::OP_CB_SRL_L,    8  };
+    cb_instructions[0x3E] = { "SRL (HL)",  &CPU::OP_CB_SRL_aHL,  16 };
+    cb_instructions[0x3F] = { "SRL A",     &CPU::OP_CB_SRL_A,    8  };
+
+    // --- Fila CB 0x40 (Bit 0) ---
+    cb_instructions[0x40] = { "BIT 0, B", &CPU::OP_CB_BIT_0_B, 8 }; cb_instructions[0x41] = { "BIT 0, C", &CPU::OP_CB_BIT_0_C, 8 };
+    cb_instructions[0x42] = { "BIT 0, D", &CPU::OP_CB_BIT_0_D, 8 }; cb_instructions[0x43] = { "BIT 0, E", &CPU::OP_CB_BIT_0_E, 8 };
+    cb_instructions[0x44] = { "BIT 0, H", &CPU::OP_CB_BIT_0_H, 8 }; cb_instructions[0x45] = { "BIT 0, L", &CPU::OP_CB_BIT_0_L, 8 };
+    cb_instructions[0x46] = { "BIT 0, (HL)", &CPU::OP_CB_BIT_0_aHL, 12 }; cb_instructions[0x47] = { "BIT 0, A", &CPU::OP_CB_BIT_0_A, 8 };
+
+    // --- Fila CB 0x48 (Bit 1) ---
+    cb_instructions[0x48] = { "BIT 1, B", &CPU::OP_CB_BIT_1_B, 8 }; cb_instructions[0x49] = { "BIT 1, C", &CPU::OP_CB_BIT_1_C, 8 };
+    cb_instructions[0x4A] = { "BIT 1, D", &CPU::OP_CB_BIT_1_D, 8 }; cb_instructions[0x4B] = { "BIT 1, E", &CPU::OP_CB_BIT_1_E, 8 };
+    cb_instructions[0x4C] = { "BIT 1, H", &CPU::OP_CB_BIT_1_H, 8 }; cb_instructions[0x4D] = { "BIT 1, L", &CPU::OP_CB_BIT_1_L, 8 };
+    cb_instructions[0x4E] = { "BIT 1, (HL)", &CPU::OP_CB_BIT_1_aHL, 12 }; cb_instructions[0x4F] = { "BIT 1, A", &CPU::OP_CB_BIT_1_A, 8 };
+
+    // --- Fila CB 0x50 (Bit 2) ---
+    cb_instructions[0x50] = { "BIT 2, B", &CPU::OP_CB_BIT_2_B, 8 }; cb_instructions[0x51] = { "BIT 2, C", &CPU::OP_CB_BIT_2_C, 8 };
+    cb_instructions[0x52] = { "BIT 2, D", &CPU::OP_CB_BIT_2_D, 8 }; cb_instructions[0x53] = { "BIT 2, E", &CPU::OP_CB_BIT_2_E, 8 };
+    cb_instructions[0x54] = { "BIT 2, H", &CPU::OP_CB_BIT_2_H, 8 }; cb_instructions[0x55] = { "BIT 2, L", &CPU::OP_CB_BIT_2_L, 8 };
+    cb_instructions[0x56] = { "BIT 2, (HL)", &CPU::OP_CB_BIT_2_aHL, 12 }; cb_instructions[0x57] = { "BIT 2, A", &CPU::OP_CB_BIT_2_A, 8 };
+
+    // --- Fila CB 0x58 (Bit 3) ---
+    cb_instructions[0x58] = { "BIT 3, B", &CPU::OP_CB_BIT_3_B, 8 }; cb_instructions[0x59] = { "BIT 3, C", &CPU::OP_CB_BIT_3_C, 8 };
+    cb_instructions[0x5A] = { "BIT 3, D", &CPU::OP_CB_BIT_3_D, 8 }; cb_instructions[0x5B] = { "BIT 3, E", &CPU::OP_CB_BIT_3_E, 8 };
+    cb_instructions[0x5C] = { "BIT 3, H", &CPU::OP_CB_BIT_3_H, 8 }; cb_instructions[0x5D] = { "BIT 3, L", &CPU::OP_CB_BIT_3_L, 8 };
+    cb_instructions[0x5E] = { "BIT 3, (HL)", &CPU::OP_CB_BIT_3_aHL, 12 }; cb_instructions[0x5F] = { "BIT 3, A", &CPU::OP_CB_BIT_3_A, 8 };
+
+    // --- Fila CB 0x60 (Bit 4) ---
+    cb_instructions[0x60] = { "BIT 4, B", &CPU::OP_CB_BIT_4_B, 8 }; cb_instructions[0x61] = { "BIT 4, C", &CPU::OP_CB_BIT_4_C, 8 };
+    cb_instructions[0x62] = { "BIT 4, D", &CPU::OP_CB_BIT_4_D, 8 }; cb_instructions[0x63] = { "BIT 4, E", &CPU::OP_CB_BIT_4_E, 8 };
+    cb_instructions[0x64] = { "BIT 4, H", &CPU::OP_CB_BIT_4_H, 8 }; cb_instructions[0x65] = { "BIT 4, L", &CPU::OP_CB_BIT_4_L, 8 };
+    cb_instructions[0x66] = { "BIT 4, (HL)", &CPU::OP_CB_BIT_4_aHL, 12 }; cb_instructions[0x67] = { "BIT 4, A", &CPU::OP_CB_BIT_4_A, 8 };
+
+    // --- Fila CB 0x68 (Bit 5) ---
+    cb_instructions[0x68] = { "BIT 5, B", &CPU::OP_CB_BIT_5_B, 8 }; cb_instructions[0x69] = { "BIT 5, C", &CPU::OP_CB_BIT_5_C, 8 };
+    cb_instructions[0x6A] = { "BIT 5, D", &CPU::OP_CB_BIT_5_D, 8 }; cb_instructions[0x6B] = { "BIT 5, E", &CPU::OP_CB_BIT_5_E, 8 };
+    cb_instructions[0x6C] = { "BIT 5, H", &CPU::OP_CB_BIT_5_H, 8 }; cb_instructions[0x6D] = { "BIT 5, L", &CPU::OP_CB_BIT_5_L, 8 };
+    cb_instructions[0x6E] = { "BIT 5, (HL)", &CPU::OP_CB_BIT_5_aHL, 12 }; cb_instructions[0x6F] = { "BIT 5, A", &CPU::OP_CB_BIT_5_A, 8 };
+
+    // --- Fila CB 0x70 (Bit 6) ---
+    cb_instructions[0x70] = { "BIT 6, B", &CPU::OP_CB_BIT_6_B, 8 }; cb_instructions[0x71] = { "BIT 6, C", &CPU::OP_CB_BIT_6_C, 8 };
+    cb_instructions[0x72] = { "BIT 6, D", &CPU::OP_CB_BIT_6_D, 8 }; cb_instructions[0x73] = { "BIT 6, E", &CPU::OP_CB_BIT_6_E, 8 };
+    cb_instructions[0x74] = { "BIT 6, H", &CPU::OP_CB_BIT_6_H, 8 }; cb_instructions[0x75] = { "BIT 6, L", &CPU::OP_CB_BIT_6_L, 8 };
+    cb_instructions[0x76] = { "BIT 6, (HL)", &CPU::OP_CB_BIT_6_aHL, 12 }; cb_instructions[0x77] = { "BIT 6, A", &CPU::OP_CB_BIT_6_A, 8 };
+
+    // --- Fila CB 0x78 (Bit 7) ---
+    cb_instructions[0x78] = { "BIT 7, B", &CPU::OP_CB_BIT_7_B, 8 }; cb_instructions[0x79] = { "BIT 7, C", &CPU::OP_CB_BIT_7_C, 8 };
+    cb_instructions[0x7A] = { "BIT 7, D", &CPU::OP_CB_BIT_7_D, 8 }; cb_instructions[0x7B] = { "BIT 7, E", &CPU::OP_CB_BIT_7_E, 8 };
+    cb_instructions[0x7C] = { "BIT 7, H", &CPU::OP_CB_BIT_7_H, 8 }; cb_instructions[0x7D] = { "BIT 7, L", &CPU::OP_CB_BIT_7_L, 8 };
+    cb_instructions[0x7E] = { "BIT 7, (HL)", &CPU::OP_CB_BIT_7_aHL, 12 }; cb_instructions[0x7F] = { "BIT 7, A", &CPU::OP_CB_BIT_7_A, 8 };
+
 }
 
 void CPU::step() {
@@ -1399,7 +1466,7 @@ void CPU::dec(Byte& reg) {
     // DEC tampoco toca C
 }
 
-void CPU::bit(int bitIndex, Byte regVal) {
+void CPU::bit(Byte regVal, int bitIndex) {
     bool isZero = !((regVal >> bitIndex) & 1);
     setFlag(F_Z, isZero);
 
@@ -1646,6 +1713,16 @@ void CPU::sra(Byte &reg) {
     setFlag(F_N, false);    
     setFlag(F_H, false);
     setFlag(F_C, isCarry);        
+}
+
+// Swap
+void CPU::swap(Byte &reg) {
+    reg = (reg << 4) | (reg >> 4);
+
+    setFlag(F_Z, reg == 0);
+    setFlag(F_N, false);
+    setFlag(F_H, false);
+    setFlag(F_C, false);    
 }
 
 void CPU::adc(Byte value) {
@@ -2298,13 +2375,16 @@ void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }
 void CPU::OP_UNKNOWN_CB() {
     // Rebobinamos 2 bytes: el opcode CB específico (ej. 0x00) y el prefijo 0xCB
     PC -= 2; 
+    cycles-=4;
     step_OLD();
 }
 
 void CPU::OP_PREFIX_CB() {
     const Byte& cb_opcode = fetchByte();
     Instruction inst = cb_instructions[cb_opcode];
-    cycles += inst.cycles;
+    if (inst.cycles > 0) {
+        cycles += (inst.cycles - 4); 
+    }
     (this->*inst.operate)();
 }
 
@@ -2394,3 +2474,84 @@ void CPU::OP_CB_SRA_aHL() {
     bus.write(getHL(), val);
 }
 void CPU::OP_CB_SRA_A()   { sra(A); }
+
+// =========================================================
+// Opcodes CB: 0x30 - 0x3F
+// =========================================================
+void CPU::OP_CB_SWAP_B()   { swap(B); }
+void CPU::OP_CB_SWAP_C()   { swap(C); }
+void CPU::OP_CB_SWAP_D()   { swap(D); }
+void CPU::OP_CB_SWAP_E()   { swap(E); }
+void CPU::OP_CB_SWAP_H()   { swap(H); }
+void CPU::OP_CB_SWAP_L()   { swap(L); }
+void CPU::OP_CB_SWAP_aHL() { 
+    Byte val = bus.read(getHL());
+    swap(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_SWAP_A()   { swap(A); }
+
+void CPU::OP_CB_SRL_B()    { srl(B); }
+void CPU::OP_CB_SRL_C()    { srl(C); }
+void CPU::OP_CB_SRL_D()    { srl(D); }
+void CPU::OP_CB_SRL_E()    { srl(E); }
+void CPU::OP_CB_SRL_H()    { srl(H); }
+void CPU::OP_CB_SRL_L()    { srl(L); }
+void CPU::OP_CB_SRL_aHL()  { 
+    Byte val = bus.read(getHL());
+    srl(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_SRL_A()    { srl(A); }
+
+// =========================================================
+// Opcodes CB: 0x40 - 0x4F (Bits 0 y 1)
+// =========================================================
+void CPU::OP_CB_BIT_0_B() { bit(B, 0); } void CPU::OP_CB_BIT_0_C() { bit(C, 0); }
+void CPU::OP_CB_BIT_0_D() { bit(D, 0); } void CPU::OP_CB_BIT_0_E() { bit(E, 0); }
+void CPU::OP_CB_BIT_0_H() { bit(H, 0); } void CPU::OP_CB_BIT_0_L() { bit(L, 0); }
+void CPU::OP_CB_BIT_0_aHL() { bit(bus.read(getHL()), 0); } void CPU::OP_CB_BIT_0_A() { bit(A, 0); }
+
+void CPU::OP_CB_BIT_1_B() { bit(B, 1); } void CPU::OP_CB_BIT_1_C() { bit(C, 1); }
+void CPU::OP_CB_BIT_1_D() { bit(D, 1); } void CPU::OP_CB_BIT_1_E() { bit(E, 1); }
+void CPU::OP_CB_BIT_1_H() { bit(H, 1); } void CPU::OP_CB_BIT_1_L() { bit(L, 1); }
+void CPU::OP_CB_BIT_1_aHL() { bit(bus.read(getHL()), 1); } void CPU::OP_CB_BIT_1_A() { bit(A, 1); }
+
+// =========================================================
+// Opcodes CB: 0x50 - 0x5F (Bits 2 y 3)
+// =========================================================
+void CPU::OP_CB_BIT_2_B() { bit(B, 2); } void CPU::OP_CB_BIT_2_C() { bit(C, 2); }
+void CPU::OP_CB_BIT_2_D() { bit(D, 2); } void CPU::OP_CB_BIT_2_E() { bit(E, 2); }
+void CPU::OP_CB_BIT_2_H() { bit(H, 2); } void CPU::OP_CB_BIT_2_L() { bit(L, 2); }
+void CPU::OP_CB_BIT_2_aHL() { bit(bus.read(getHL()), 2); } void CPU::OP_CB_BIT_2_A() { bit(A, 2); }
+
+void CPU::OP_CB_BIT_3_B() { bit(B, 3); } void CPU::OP_CB_BIT_3_C() { bit(C, 3); }
+void CPU::OP_CB_BIT_3_D() { bit(D, 3); } void CPU::OP_CB_BIT_3_E() { bit(E, 3); }
+void CPU::OP_CB_BIT_3_H() { bit(H, 3); } void CPU::OP_CB_BIT_3_L() { bit(L, 3); }
+void CPU::OP_CB_BIT_3_aHL() { bit(bus.read(getHL()), 3); } void CPU::OP_CB_BIT_3_A() { bit(A, 3); }
+
+// =========================================================
+// Opcodes CB: 0x60 - 0x6F (Bits 4 y 5)
+// =========================================================
+void CPU::OP_CB_BIT_4_B() { bit(B, 4); } void CPU::OP_CB_BIT_4_C() { bit(C, 4); }
+void CPU::OP_CB_BIT_4_D() { bit(D, 4); } void CPU::OP_CB_BIT_4_E() { bit(E, 4); }
+void CPU::OP_CB_BIT_4_H() { bit(H, 4); } void CPU::OP_CB_BIT_4_L() { bit(L, 4); }
+void CPU::OP_CB_BIT_4_aHL() { bit(bus.read(getHL()), 4); } void CPU::OP_CB_BIT_4_A() { bit(A, 4); }
+
+void CPU::OP_CB_BIT_5_B() { bit(B, 5); } void CPU::OP_CB_BIT_5_C() { bit(C, 5); }
+void CPU::OP_CB_BIT_5_D() { bit(D, 5); } void CPU::OP_CB_BIT_5_E() { bit(E, 5); }
+void CPU::OP_CB_BIT_5_H() { bit(H, 5); } void CPU::OP_CB_BIT_5_L() { bit(L, 5); }
+void CPU::OP_CB_BIT_5_aHL() { bit(bus.read(getHL()), 5); } void CPU::OP_CB_BIT_5_A() { bit(A, 5); }
+
+// =========================================================
+// Opcodes CB: 0x70 - 0x7F (Bits 6 y 7)
+// =========================================================
+void CPU::OP_CB_BIT_6_B() { bit(B, 6); } void CPU::OP_CB_BIT_6_C() { bit(C, 6); }
+void CPU::OP_CB_BIT_6_D() { bit(D, 6); } void CPU::OP_CB_BIT_6_E() { bit(E, 6); }
+void CPU::OP_CB_BIT_6_H() { bit(H, 6); } void CPU::OP_CB_BIT_6_L() { bit(L, 6); }
+void CPU::OP_CB_BIT_6_aHL() { bit(bus.read(getHL()), 6); } void CPU::OP_CB_BIT_6_A() { bit(A, 6); }
+
+void CPU::OP_CB_BIT_7_B() { bit(B, 7); } void CPU::OP_CB_BIT_7_C() { bit(C, 7); }
+void CPU::OP_CB_BIT_7_D() { bit(D, 7); } void CPU::OP_CB_BIT_7_E() { bit(E, 7); }
+void CPU::OP_CB_BIT_7_H() { bit(H, 7); } void CPU::OP_CB_BIT_7_L() { bit(L, 7); }
+void CPU::OP_CB_BIT_7_aHL() { bit(bus.read(getHL()), 7); } void CPU::OP_CB_BIT_7_A() { bit(A, 7); }
