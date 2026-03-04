@@ -317,6 +317,44 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
     cb_instructions[0x0E] = { "RRC (HL)", &CPU::OP_CB_RRC_aHL, 16 };
     cb_instructions[0x0F] = { "RRC A",    &CPU::OP_CB_RRC_A,   8  };
 
+    // --- Fila CB 0x10 ---
+    cb_instructions[0x10] = { "RL B",     &CPU::OP_CB_RL_B,    8  };
+    cb_instructions[0x11] = { "RL C",     &CPU::OP_CB_RL_C,    8  };
+    cb_instructions[0x12] = { "RL D",     &CPU::OP_CB_RL_D,    8  };
+    cb_instructions[0x13] = { "RL E",     &CPU::OP_CB_RL_E,    8  };
+    cb_instructions[0x14] = { "RL H",     &CPU::OP_CB_RL_H,    8  };
+    cb_instructions[0x15] = { "RL L",     &CPU::OP_CB_RL_L,    8  };
+    cb_instructions[0x16] = { "RL (HL)",  &CPU::OP_CB_RL_aHL,  16 };
+    cb_instructions[0x17] = { "RL A",     &CPU::OP_CB_RL_A,    8  };
+
+    cb_instructions[0x18] = { "RR B",     &CPU::OP_CB_RR_B,    8  };
+    cb_instructions[0x19] = { "RR C",     &CPU::OP_CB_RR_C,    8  };
+    cb_instructions[0x1A] = { "RR D",     &CPU::OP_CB_RR_D,    8  };
+    cb_instructions[0x1B] = { "RR E",     &CPU::OP_CB_RR_E,    8  };
+    cb_instructions[0x1C] = { "RR H",     &CPU::OP_CB_RR_H,    8  };
+    cb_instructions[0x1D] = { "RR L",     &CPU::OP_CB_RR_L,    8  };
+    cb_instructions[0x1E] = { "RR (HL)",  &CPU::OP_CB_RR_aHL,  16 };
+    cb_instructions[0x1F] = { "RR A",     &CPU::OP_CB_RR_A,    8  };
+
+    // --- Fila CB 0x20 ---
+    cb_instructions[0x20] = { "SLA B",    &CPU::OP_CB_SLA_B,   8  };
+    cb_instructions[0x21] = { "SLA C",    &CPU::OP_CB_SLA_C,   8  };
+    cb_instructions[0x22] = { "SLA D",    &CPU::OP_CB_SLA_D,   8  };
+    cb_instructions[0x23] = { "SLA E",    &CPU::OP_CB_SLA_E,   8  };
+    cb_instructions[0x24] = { "SLA H",    &CPU::OP_CB_SLA_H,   8  };
+    cb_instructions[0x25] = { "SLA L",    &CPU::OP_CB_SLA_L,   8  };
+    cb_instructions[0x26] = { "SLA (HL)", &CPU::OP_CB_SLA_aHL, 16 };
+    cb_instructions[0x27] = { "SLA A",    &CPU::OP_CB_SLA_A,   8  };
+
+    cb_instructions[0x28] = { "SRA B",    &CPU::OP_CB_SRA_B,   8  };
+    cb_instructions[0x29] = { "SRA C",    &CPU::OP_CB_SRA_C,   8  };
+    cb_instructions[0x2A] = { "SRA D",    &CPU::OP_CB_SRA_D,   8  };
+    cb_instructions[0x2B] = { "SRA E",    &CPU::OP_CB_SRA_E,   8  };
+    cb_instructions[0x2C] = { "SRA H",    &CPU::OP_CB_SRA_H,   8  };
+    cb_instructions[0x2D] = { "SRA L",    &CPU::OP_CB_SRA_L,   8  };
+    cb_instructions[0x2E] = { "SRA (HL)", &CPU::OP_CB_SRA_aHL, 16 };
+    cb_instructions[0x2F] = { "SRA A",    &CPU::OP_CB_SRA_A,   8  };
+
 }
 
 void CPU::step() {
@@ -1585,6 +1623,31 @@ void CPU::srl(Byte& reg) {
     setFlag(F_C, isCarry);
 }
 
+// Shift left arithmetic
+void CPU::sla(Byte &reg) {
+    const bool isCarry = (reg && 0x80) >> 7 == 1;
+
+    reg <<= 1;
+
+    setFlag(F_Z, reg == 0);
+    setFlag(F_N, false);    
+    setFlag(F_H, false);    
+    setFlag(F_C, isCarry);        
+}
+
+// Shift right arithmetic
+void CPU::sra(Byte &reg) {
+    const bool isCarry = (reg && 0x01) == 1;
+    const Byte sign = (reg && 0x80);
+
+    reg = (reg >> 1) | sign;
+
+    setFlag(F_Z, reg == 0);
+    setFlag(F_N, false);    
+    setFlag(F_H, false);
+    setFlag(F_C, isCarry);        
+}
+
 void CPU::adc(Byte value) {
     // 1. Obtenemos el Carry actual (0 o 1)
     Byte carry = getFlag(F_C) ? 1 : 0;
@@ -2273,3 +2336,61 @@ void CPU::OP_CB_RRC_aHL() {
     bus.write(getHL(), val);
 }
 void CPU::OP_CB_RRC_A()   { rrc(A, true); }
+
+// =========================================================
+// Opcodes CB: 0x10 - 0x1F
+// =========================================================
+void CPU::OP_CB_RL_B()   { rl(B); }
+void CPU::OP_CB_RL_C()   { rl(C); }
+void CPU::OP_CB_RL_D()   { rl(D); }
+void CPU::OP_CB_RL_E()   { rl(E); }
+void CPU::OP_CB_RL_H()   { rl(H); }
+void CPU::OP_CB_RL_L()   { rl(L); }
+void CPU::OP_CB_RL_aHL() { 
+    Byte val = bus.read(getHL());
+    rl(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_RL_A()   { rl(A); }
+
+void CPU::OP_CB_RR_B()   { rr(B); }
+void CPU::OP_CB_RR_C()   { rr(C); }
+void CPU::OP_CB_RR_D()   { rr(D); }
+void CPU::OP_CB_RR_E()   { rr(E); }
+void CPU::OP_CB_RR_H()   { rr(H); }
+void CPU::OP_CB_RR_L()   { rr(L); }
+void CPU::OP_CB_RR_aHL() { 
+    Byte val = bus.read(getHL());
+    rr(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_RR_A()   { rr(A); }
+
+// =========================================================
+// Opcodes CB: 0x20 - 0x2F
+// =========================================================
+void CPU::OP_CB_SLA_B()   { sla(B); }
+void CPU::OP_CB_SLA_C()   { sla(C); }
+void CPU::OP_CB_SLA_D()   { sla(D); }
+void CPU::OP_CB_SLA_E()   { sla(E); }
+void CPU::OP_CB_SLA_H()   { sla(H); }
+void CPU::OP_CB_SLA_L()   { sla(L); }
+void CPU::OP_CB_SLA_aHL() { 
+    Byte val = bus.read(getHL());
+    sla(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_SLA_A()   { sla(A); }
+
+void CPU::OP_CB_SRA_B()   { sra(B); }
+void CPU::OP_CB_SRA_C()   { sra(C); }
+void CPU::OP_CB_SRA_D()   { sra(D); }
+void CPU::OP_CB_SRA_E()   { sra(E); }
+void CPU::OP_CB_SRA_H()   { sra(H); }
+void CPU::OP_CB_SRA_L()   { sra(L); }
+void CPU::OP_CB_SRA_aHL() { 
+    Byte val = bus.read(getHL());
+    sra(val);
+    bus.write(getHL(), val);
+}
+void CPU::OP_CB_SRA_A()   { sra(A); }

@@ -92,6 +92,8 @@ private:
     void rl(Byte& reg);
     void rr(Byte &reg);
     void srl(Byte &reg);
+    void sla(Byte &reg);
+    void sra(Byte &reg);
     void daa();
     void rlc(Byte &reg, bool setZeroFlag);
     void rrc(Byte &reg, bool setZeroFlag);
@@ -425,4 +427,44 @@ private:
     void OP_CB_RRC_L();   // 0x0D
     void OP_CB_RRC_aHL(); // 0x0E
     void OP_CB_RRC_A();   // 0x0F
+
+    // =========================================================
+    // Opcodes CB: 0x10 - 0x1F (Rotaciones a través del Carry)
+    // =========================================================
+    void OP_CB_RL_B();    // 0x10
+    void OP_CB_RL_C();    // 0x11
+    void OP_CB_RL_D();    // 0x12
+    void OP_CB_RL_E();    // 0x13
+    void OP_CB_RL_H();    // 0x14
+    void OP_CB_RL_L();    // 0x15
+    void OP_CB_RL_aHL();  // 0x16
+    void OP_CB_RL_A();    // 0x17
+    void OP_CB_RR_B();    // 0x18
+    void OP_CB_RR_C();    // 0x19
+    void OP_CB_RR_D();    // 0x1A
+    void OP_CB_RR_E();    // 0x1B
+    void OP_CB_RR_H();    // 0x1C
+    void OP_CB_RR_L();    // 0x1D
+    void OP_CB_RR_aHL();  // 0x1E
+    void OP_CB_RR_A();    // 0x1F
+
+    // =========================================================
+    // Opcodes CB: 0x20 - 0x2F (Desplazamientos Aritméticos)
+    // =========================================================
+    void OP_CB_SLA_B();   // 0x20
+    void OP_CB_SLA_C();   // 0x21
+    void OP_CB_SLA_D();   // 0x22
+    void OP_CB_SLA_E();   // 0x23
+    void OP_CB_SLA_H();   // 0x24
+    void OP_CB_SLA_L();   // 0x25
+    void OP_CB_SLA_aHL(); // 0x26
+    void OP_CB_SLA_A();   // 0x27
+    void OP_CB_SRA_B();   // 0x28
+    void OP_CB_SRA_C();   // 0x29
+    void OP_CB_SRA_D();   // 0x2A
+    void OP_CB_SRA_E();   // 0x2B
+    void OP_CB_SRA_H();   // 0x2C
+    void OP_CB_SRA_L();   // 0x2D
+    void OP_CB_SRA_aHL(); // 0x2E
+    void OP_CB_SRA_A();   // 0x2F
 };
