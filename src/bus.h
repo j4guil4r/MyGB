@@ -11,10 +11,12 @@ public:
     Bus();
     ~Bus() = default;
 
-    Byte read(Word addr) const;
+    [[nodiscard]] Byte read(Word addr) const;
     void write(Word addr, Byte data);
 
     bool loadROM(const std::string& filename);
+    std::string getSerialOutput () const;
+    void clearSerialOutput() { serialOutput = ""; }
 
     // --- MEMORIAS INTERNAS ---
 
@@ -49,14 +51,16 @@ public:
 
     // Contadores internos para gestionar la frecuencia
     // La GB corre a 4194304 Hz.
-    int divCounter = 0;   // Acumulador para el registro DIV
-    int timerCounter = 0; // Acumulador para el registro TIMA
+    long long divCounter = 0;   // Acumulador para el registro DIV
+    long long timerCounter = 0; // Acumulador para el registro TIMA
 
-    void updateTimers(int cycles);
+    void updateTimers(long long cycles);
 
     // Lo usaremos para que el Timer le diga a la CPU "¡Oye!"
     void requestInterrupt(int bit);
 
     Byte ly = 0; // 0xFF44 - LCD Y Coordinate
-    int ppuCounter = 0; // Para simular el dibujo de líneas
+    long long ppuCounter = 0; // Para simular el dibujo de líneas
+private:
+    std::string serialOutput = "";
 };
