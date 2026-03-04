@@ -102,6 +102,10 @@ private:
     void rrc(Byte &reg, bool setZeroFlag);
 
     //====== ARQUITECTURA PARA INSTRUCCIONES ======//
+
+    // TODO: Refactor con X-Macros & tabla constexpr
+    // también reescribir funciones con programación genérica (?)
+
     using OpcodeHandler = void (CPU::*)();
 
     struct Instruction {
