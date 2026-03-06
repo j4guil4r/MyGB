@@ -5,9 +5,12 @@
 #include <iostream>
 #include <fstream>
 #include "types.h"
+#include "ppu.h"
 
 class Bus {
 public:
+    PPU ppu;
+
     Bus();
     ~Bus() = default;
 

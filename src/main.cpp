@@ -2,12 +2,14 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <SDL2/SDL.h>
 #include "bus.h"
 #include "cpu.h"
+#include "ppu.h"
 
 namespace fs = std::filesystem;
 
-int main () {
+void Test () {
     std::string romsDirectory = "roms/";
 
     std::vector<std::string> filenames;
@@ -58,6 +60,7 @@ int main () {
                 long long deltaCycles = cyclesAfter - cyclesBefore;
 
                 gbBus.updateTimers(deltaCycles);
+                gbBus.ppu.step(deltaCycles);
                 cpu.handleInterrupts();
 
                 // Revisar la salida serial para detener el bucle
@@ -85,5 +88,92 @@ int main () {
             std::cout << "\n[RESULTADO]: 💥 CRASH -> " << e.what() << "\n";
         }
     }
+}
+
+int Window () {
+    // 1. Inicializar SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "Error al inicializar SDL: " << SDL_GetError() << "\n";
+        return -1;
+    }
+
+    int scale = 4;
+    SDL_Window* window = SDL_CreateWindow(
+        "Game Boy Emulator", 
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        GB_WIDTH * scale, GB_HEIGHT * scale, 
+        SDL_WINDOW_SHOWN
+    );
+
+    // 2. Crear el Renderizador (Acelerado por Hardware)
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    
+    // 3. Crear la Textura (Nuestro lienzo de 160x144)
+    // Usamos SDL_PIXELFORMAT_ARGB8888 porque nuestro framebuffer es un array de uint32_t
+    SDL_Texture* texture = SDL_CreateTexture(
+        renderer, 
+        SDL_PIXELFORMAT_ARGB8888, 
+        SDL_TEXTUREACCESS_STREAMING, 
+        GB_WIDTH, GB_HEIGHT
+    );
+
+    // Instanciamos nuestra PPU
+    // TODO: conectar al bus
+    PPU ppu;
+
+    // --- TEST VISUAL ---
+    // Vamos a pintar un par de píxeles a mano en el framebuffer para probar que funciona.
+    // El índice se calcula así: (Y * ancho) + X
+    ppu.framebuffer[(72 * GB_WIDTH) + 80] = 0xFFFF0000; // Píxel Rojo exacto en el centro
+    ppu.framebuffer[(73 * GB_WIDTH) + 80] = 0xFF00FF00; // Píxel Verde debajo
+    ppu.framebuffer[(74 * GB_WIDTH) + 80] = 0xFF0000FF; // Píxel Azul debajo
+
+    bool isRunning = true;
+    SDL_Event event;
+
+    // 4. El Game Loop Principal
+    while (isRunning) {
+        // Atender eventos (como hacer clic en la 'X' para cerrar la ventana)
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                isRunning = false;
+            }
+        }
+
+        // --- RENDERIZADO ---
+        // A. Actualizamos la Textura de SDL con los datos de nuestro Framebuffer
+        // El "Pitch" es la cantidad de bytes por cada fila (160 píxeles * 4 bytes)
+        SDL_UpdateTexture(texture, nullptr, ppu.framebuffer.data(), GB_WIDTH * sizeof(uint32_t));
+
+        // B. Limpiamos el renderizador
+        SDL_RenderClear(renderer);
+
+        // C. Copiamos la Textura al Renderizador (SDL la escala automáticamente x4)
+        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+
+        // D. Presentamos lo dibujado en la pantalla
+        SDL_RenderPresent(renderer);
+
+        // E. Pequeña pausa para no quemar el CPU (aprox 60 FPS)
+        SDL_Delay(16); 
+    }
+
+    // 5. Limpieza al salir
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+    window = NULL;
+    renderer = NULL; 
+    texture = NULL;
+
+    return 0;
+}
+
+
+int main () {
+    Test();
+    Window();
     return 0;
 }

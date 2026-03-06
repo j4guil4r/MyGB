@@ -15,4 +15,11 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 
 add_executable(MyGB ${SOURCES})
 
-# TODO: Linkear SDL2
+# --- SDL2 ---
+find_package(SDL2 REQUIRED)
+
+# 2. Incluye los directorios de las cabeceras (.h)
+target_include_directories(MyGB PRIVATE ${SDL2_INCLUDE_DIRS})
+
+# 3. Linkea los binarios precompilados (.so / .a) a tu ejecutable
+target_link_libraries(MyGB PRIVATE ${SDL2_LIBRARIES})
