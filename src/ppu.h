@@ -3,8 +3,9 @@
 #include <array>
 #include "types.h"
 
-#define GB_WIDTH 160
-#define GB_HEIGHT 144
+// Dimensiones originales de la Game Boy
+constexpr int GB_WIDTH = 160;
+constexpr int GB_HEIGHT = 144;
 
 class Bus;
 
@@ -18,6 +19,7 @@ public:
     // Usamos uint32_t para guardar colores en formato ARGB (Alpha, Red, Green, Blue) que usa SDL2.
     std::array<uint32_t, GB_WIDTH * GB_HEIGHT> framebuffer {};
     bool frameReady = false;
+    bool requestVBlankInterrupt = false;
 
     // --- REGISTROS DE HARDWARE (0xFF40 - 0xFF4B) ---
     Byte lcdc = 0x91; // 0xFF40 - LCD Control (Pantalla encendida por defecto)
@@ -50,6 +52,7 @@ public:
 
 private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
+    void drawScanline();
 
     enum class PPUMode {
         HBlank = 0,

@@ -66,6 +66,8 @@ Byte Bus::read(Word addr) const {
 
     // 8. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
+
+        if (addr == 0xFF00) return 0xFF; // Ningún botón presionado
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             return ppu.read(addr);
@@ -95,7 +97,7 @@ Byte Bus::read(Word addr) const {
         return ieRegister;
     }
 
-    return 0;
+    return 0xFF;
 }
 
 // EL MAPA DE MEMORIA (ESCRITURA)
