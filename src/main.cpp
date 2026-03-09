@@ -44,14 +44,6 @@ int main(int argc, char* argv[]) {
     CPU cpu(gbBus);
     cpu.reset();
 
-    // Configuración post-BIOS
-    cpu.A = 0x01; cpu.F = 0xB0;
-    cpu.B = 0x00; cpu.C = 0x13;
-    cpu.D = 0x00; cpu.E = 0xD8;
-    cpu.H = 0x01; cpu.L = 0x4D;
-    cpu.SP = 0xFFFE;
-    cpu.PC = 0x0100;
-
     // 3. EL BUCLE PRINCIPAL (GAME LOOP)
     bool isRunning = true;
     SDL_Event event;
@@ -67,6 +59,41 @@ int main(int argc, char* argv[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 isRunning = false;
+            }
+            else if (event.type == SDL_KEYDOWN) {
+                bool buttonPressed = false;
+                // Al presionar, apagamos el bit (ponemos 0) con un AND bitwise y negación (~)
+                switch (event.key.keysym.sym) {
+                    case SDLK_RIGHT: gbBus.joypadDir &= ~0x01; buttonPressed = true; break;
+                    case SDLK_LEFT:  gbBus.joypadDir &= ~0x02; buttonPressed = true; break;
+                    case SDLK_UP:    gbBus.joypadDir &= ~0x04; buttonPressed = true; break;
+                    case SDLK_DOWN:  gbBus.joypadDir &= ~0x08; buttonPressed = true; break;
+                    case SDLK_z:     gbBus.joypadAction &= ~0x01; buttonPressed = true; break; // Botón A
+                    case SDLK_x:     gbBus.joypadAction &= ~0x02; buttonPressed = true; break; // Botón B
+                    case SDLK_RSHIFT:
+                    case SDLK_LSHIFT:gbBus.joypadAction &= ~0x04; buttonPressed = true; break; // Select
+                    case SDLK_RETURN:gbBus.joypadAction &= ~0x08; buttonPressed = true; break; // Start
+                }
+                
+                // Si presionamos un botón, disparamos la Interrupción del Joypad (Bit 4 de IF)
+                if (buttonPressed) {
+                    Byte currentIF = gbBus.read(0xFF0F);
+                    gbBus.write(0xFF0F, currentIF | 0x10);
+                }
+            } 
+            else if (event.type == SDL_KEYUP) {
+                // Al soltar, encendemos el bit (ponemos 1) con un OR bitwise
+                switch (event.key.keysym.sym) {
+                    case SDLK_RIGHT: gbBus.joypadDir |= 0x01; break;
+                    case SDLK_LEFT:  gbBus.joypadDir |= 0x02; break;
+                    case SDLK_UP:    gbBus.joypadDir |= 0x04; break;
+                    case SDLK_DOWN:  gbBus.joypadDir |= 0x08; break;
+                    case SDLK_z:     gbBus.joypadAction |= 0x01; break; // Botón A
+                    case SDLK_x:     gbBus.joypadAction |= 0x02; break; // Botón B
+                    case SDLK_RSHIFT:
+                    case SDLK_LSHIFT:gbBus.joypadAction |= 0x04; break; // Select
+                    case SDLK_RETURN:gbBus.joypadAction |= 0x08; break; // Start
+                }
             }
         }
 

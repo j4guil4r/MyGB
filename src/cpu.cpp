@@ -539,6 +539,12 @@ void CPU::step() {
 void CPU::reset() {
     PC = 0x0100; // Punto de entrada estándar de la GB
     // TODO: valores por defecto de todos los registros.
+        // Configuración post-BIOS
+    A = 0x01; F = 0xB0;
+    B = 0x00; C = 0x13;
+    D = 0x00; E = 0xD8;
+    H = 0x01; L = 0x4D;
+    SP = 0xFFFE;
 }
 
 // FETCH

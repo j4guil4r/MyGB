@@ -67,7 +67,21 @@ Byte Bus::read(Word addr) const {
     // 8. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
 
-        if (addr == 0xFF00) return 0xFF; // Ningún botón presionado
+        // --- JOYPAD ---
+        if (addr == 0xFF00) {
+            Byte result = 0xCF; // Los bits 6 y 7 siempre devuelven 1 en hardware real
+            result &= joypadSelect; // Mantenemos los bits de selección que el juego escribió
+
+            // Si el Bit 4 es 0, el juego quiere leer Direcciones (Flechas)
+            if ((joypadSelect & 0x10) == 0) {
+                result &= joypadDir;
+            }
+            // Si el Bit 5 es 0, el juego quiere leer Acción (A, B, Select, Start)
+            if ((joypadSelect & 0x20) == 0) {
+                result &= joypadAction;
+            }
+            return result;
+        }
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             return ppu.read(addr);
@@ -127,6 +141,14 @@ void Bus::write(Word addr, Byte data) {
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             ppu.write(addr, data);
+            return;
+        }
+
+        // --- JOYPAD ---
+        if (addr == 0xFF00) {
+            // El juego SOLO puede escribir en los bits 4 y 5 para seleccionar qué leer.
+            // Protegemos el resto de los bits.
+            joypadSelect = (data & 0x30) | 0xCF; 
             return;
         }
 
