@@ -3,35 +3,11 @@
 #include <SDL2/SDL.h>
 #include "bus.h"
 #include "cpu.h"
+#include "ui.h"
 
 int main(int argc, char* argv[]) {
-    // 1. INICIALIZAR SDL2
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "Error al inicializar SDL: " << SDL_GetError() << "\n";
-        return -1;
-    }
-
-    int scale = 4;
-    SDL_Window* window = SDL_CreateWindow(
-        "Game Boy Emulator", 
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        GB_WIDTH * scale, GB_HEIGHT * scale, 
-        SDL_WINDOW_SHOWN
-    );
-
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_Texture* texture = SDL_CreateTexture(
-        renderer, 
-        SDL_PIXELFORMAT_ARGB8888, 
-        SDL_TEXTUREACCESS_STREAMING, 
-        GB_WIDTH, GB_HEIGHT
-    );
-
-    if (!window || !renderer || !texture) {
-        std::cerr << "Error creando la ventana/renderizador: " << SDL_GetError() << "\n";
-        SDL_Quit();
-        return -1;
-    }
+    UI ui;
+    if (!ui.init(GB_WIDTH, GB_HEIGHT, SCALE)) return -1;
 
     Bus gbBus;
     std::string romPath = "roms/Tetris.gb"; 
@@ -44,60 +20,16 @@ int main(int argc, char* argv[]) {
     CPU cpu(gbBus);
     cpu.reset();
 
-    // 3. EL BUCLE PRINCIPAL (GAME LOOP)
-    bool isRunning = true;
-    SDL_Event event;
-
     std::cout << "Emulador iniciado. Jugando: " << romPath << "\n";
 
     // 70224 ciclos de reloj de la CPU equivalen exactamente a 1 frame (1/60 de segundo)
-    const int MAX_CYCLES_PER_FRAME = 70224; 
-    int framesRenderizados = 0;
+    const int MAX_CYCLES_PER_FRAME = 70224;
 
-    while (isRunning) {
-        // A. Atender eventos de la ventana
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                isRunning = false;
-            }
-            else if (event.type == SDL_KEYDOWN) {
-                bool buttonPressed = false;
-                // Al presionar, apagamos el bit (ponemos 0) con un AND bitwise y negación (~)
-                switch (event.key.keysym.sym) {
-                    case SDLK_RIGHT: gbBus.joypadDir &= ~0x01; buttonPressed = true; break;
-                    case SDLK_LEFT:  gbBus.joypadDir &= ~0x02; buttonPressed = true; break;
-                    case SDLK_UP:    gbBus.joypadDir &= ~0x04; buttonPressed = true; break;
-                    case SDLK_DOWN:  gbBus.joypadDir &= ~0x08; buttonPressed = true; break;
-                    case SDLK_z:     gbBus.joypadAction &= ~0x01; buttonPressed = true; break; // Botón A
-                    case SDLK_x:     gbBus.joypadAction &= ~0x02; buttonPressed = true; break; // Botón B
-                    case SDLK_RSHIFT:
-                    case SDLK_LSHIFT:gbBus.joypadAction &= ~0x04; buttonPressed = true; break; // Select
-                    case SDLK_RETURN:gbBus.joypadAction &= ~0x08; buttonPressed = true; break; // Start
-                }
-                
-                // Si presionamos un botón, disparamos la Interrupción del Joypad (Bit 4 de IF)
-                if (buttonPressed) {
-                    Byte currentIF = gbBus.read(0xFF0F);
-                    gbBus.write(0xFF0F, currentIF | 0x10);
-                }
-            } 
-            else if (event.type == SDL_KEYUP) {
-                // Al soltar, encendemos el bit (ponemos 1) con un OR bitwise
-                switch (event.key.keysym.sym) {
-                    case SDLK_RIGHT: gbBus.joypadDir |= 0x01; break;
-                    case SDLK_LEFT:  gbBus.joypadDir |= 0x02; break;
-                    case SDLK_UP:    gbBus.joypadDir |= 0x04; break;
-                    case SDLK_DOWN:  gbBus.joypadDir |= 0x08; break;
-                    case SDLK_z:     gbBus.joypadAction |= 0x01; break; // Botón A
-                    case SDLK_x:     gbBus.joypadAction |= 0x02; break; // Botón B
-                    case SDLK_RSHIFT:
-                    case SDLK_LSHIFT:gbBus.joypadAction |= 0x04; break; // Select
-                    case SDLK_RETURN:gbBus.joypadAction |= 0x08; break; // Start
-                }
-            }
-        }
+    while (ui.isRunning()) {
 
-        // B. Ejecutar la CPU por exactamente 1 frame de tiempo
+        ui.handleEvents(gbBus);
+
+        // Ejecutar la CPU por exactamente 1 frame de tiempo
         int cyclesThisFrame = 0;
         
         while (cyclesThisFrame < MAX_CYCLES_PER_FRAME) {
@@ -121,39 +53,12 @@ int main(int argc, char* argv[]) {
             cpu.handleInterrupts();
         }
 
-        // C. Terminó el frame. ¿La PPU armó un cuadro nuevo?
-        if (gbBus.ppu.frameReady) {
-            SDL_UpdateTexture(texture, nullptr, gbBus.ppu.framebuffer.data(), GB_WIDTH * sizeof(uint32_t));
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
+        // Terminó el frame. ¿La PPU armó un cuadro nuevo?
+        ui.render(gbBus);
+        gbBus.ppu.frameReady = false;
 
-            gbBus.ppu.frameReady = false;
-        } else {
-            // Si la pantalla estaba apagada, igual refrescamos la ventana para que no se congele el OS
-            SDL_RenderClear(renderer);
-            SDL_UpdateTexture(texture, nullptr, gbBus.ppu.framebuffer.data(), GB_WIDTH * sizeof(uint32_t));
-            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
-        }
-
-        // D. RADAR DE DEPURACIÓN (Imprimir el PC cada 60 frames / 1 segundo)
-        framesRenderizados++;
-        if (framesRenderizados % 60 == 0) {
-            std::cout << "[RADAR] El juego sigue corriendo. PC actual: 0x" 
-                      << std::hex << cpu.PC << std::dec << "\n";
-        }
-
-        // E. Sincronizar a 60 FPS
         SDL_Delay(16); 
     }
-
-
-    // 4. LIMPIEZA
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 
     std::cout << "Emulador cerrado correctamente.\n";
     return 0;

@@ -6,6 +6,7 @@
 // Dimensiones originales de la Game Boy
 constexpr int GB_WIDTH = 160;
 constexpr int GB_HEIGHT = 144;
+constexpr int SCALE = 4;
 
 class Bus;
 
