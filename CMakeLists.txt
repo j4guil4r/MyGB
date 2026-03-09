@@ -11,15 +11,21 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
-
-add_executable(MyGB ${SOURCES})
-
-# --- SDL2 ---
+# Buscamos SDL2
 find_package(SDL2 REQUIRED)
 
-# 2. Incluye los directorios de las cabeceras (.h)
-target_include_directories(MyGB PRIVATE ${SDL2_INCLUDE_DIRS})
+enable_testing()
 
-# 3. Linkea los binarios precompilados (.so / .a) a tu ejecutable
+set(CORE_SOURCES "src/cpu.cpp" "src/bus.cpp" "src/ppu.cpp")
+
+# ---  EMULADOR (Tetris) ---
+add_executable(MyGB src/main.cpp src/ui.cpp ${CORE_SOURCES})
+target_include_directories(MyGB PRIVATE ${SDL2_INCLUDE_DIRS} "src")
 target_link_libraries(MyGB PRIVATE ${SDL2_LIBRARIES})
+
+# --- LOS TESTS (Blargg) ---
+add_executable(MyGB_Tests tests/main_test.cpp ${CORE_SOURCES})
+target_include_directories(MyGB_Tests PRIVATE "src")
+
+
+add_test(NAME BlarggTests COMMAND MyGB_Tests)
