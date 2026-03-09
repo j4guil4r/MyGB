@@ -54,6 +54,7 @@ public:
 private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
     void drawScanline();
+    void drawSprites();
 
     enum class PPUMode {
         HBlank = 0,

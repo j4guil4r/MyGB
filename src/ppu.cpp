@@ -24,6 +24,100 @@ void PPU::setMode(int mode) {
     stat = (stat & ~0x03) | (mode & 0x03);
 }
 
+void PPU::drawSprites() {
+    // El bit 1 del LCDC (0xFF40) controla si los sprites son visibles.
+    if ((lcdc & 0x02) == 0) return;
+
+    // Tamaño: El bit 2 del LCDC dice si son de 8x8 (0) o de 8x16 (1) píxeles.
+    int spriteHeight = (lcdc & 0x04) ? 16 : 8;
+
+    for (int sprite = 0; sprite < 40; sprite++) {
+        // Obtenemos el índice base de este sprite en el arreglo OAM
+        int index = sprite * 4;
+
+        int yPos = oam[index] - 16;
+        int xPos = oam[index + 1] - 8;
+        Byte tileIndex = oam[index + 2];
+        Byte attributes = oam[index + 3];
+
+        // ¿Este Sprite cruza la línea (LY) que estamos dibujando ahora mismo?
+        if (ly >= yPos && ly < (yPos + spriteHeight)) {
+            
+            // Extraemos las banderas de los Atributos
+            bool flipY = (attributes & 0x40) != 0;
+            bool flipX = (attributes & 0x20) != 0;
+            bool objBehindBg = (attributes & 0x80) != 0;
+            
+            // ¿Qué paleta usa? (OBP0 u OBP1)
+            Byte palette = (attributes & 0x10) ? obp1 : obp0;
+
+            // Calcular qué fila del Sprite (de la 0 a la 7 o 15) estamos dibujando
+            int line = ly - yPos;
+
+            // Si el sprite está volteado de cabeza (Flip Y), leemos la línea desde abajo
+            if (flipY) {
+                line = (spriteHeight - 1) - line;
+            }
+
+            // Si es un sprite de 8x16, el hardware ignora el bit más bajo del tileIndex
+            if (spriteHeight == 16) {
+                tileIndex &= 0xFE; // Forzamos a que sea un número par
+            }
+
+            // Buscar los 2 bytes que forman la línea en la VRAM (0x8000)
+            Word tileLocation = 0x8000 + (tileIndex * 16);
+            Byte data1 = vram[(tileLocation + (line * 2)) - 0x8000];
+            Byte data2 = vram[(tileLocation + (line * 2) + 1) - 0x8000];
+
+            // Dibujar los 8 píxeles horizontales de este Sprite
+            for (int tilePixel = 7; tilePixel >= 0; tilePixel--) {
+                
+                // Calculamos en qué coordenada X de la pantalla cae este píxel
+                int colorBit = tilePixel;
+                
+                // Si el sprite está espejado horizontalmente (Flip X), leemos los bits al revés
+                if (flipX) {
+                    colorBit = 7 - colorBit;
+                }
+
+                int pixelX = xPos + (7 - tilePixel);
+
+                // Evitamos dibujar píxeles que caen fuera de la pantalla
+                if (pixelX < 0 || pixelX >= 160) continue;
+
+                // Extraemos el color ID (igual que con el fondo)
+                int colorBit0 = (data1 >> colorBit) & 0x01;
+                int colorBit1 = (data2 >> colorBit) & 0x01;
+                int colorNum = (colorBit1 << 1) | colorBit0;
+
+                // El Color 0 es transparente en los Sprites
+                if (colorNum == 0) continue;
+
+                // Determinar el color final usando la paleta seleccionada
+                int paletteColor = (palette >> (colorNum * 2)) & 0x03;
+                
+                uint32_t finalColor;
+                switch (paletteColor) {
+                    case 0: finalColor = GB_COLOR_0; // Blanco
+                    case 1: finalColor = GB_COLOR_1; // Gris Claro
+                    case 2: finalColor = GB_COLOR_2; // Gris Oscuro
+                    case 3: finalColor = GB_COLOR_3; // Negro
+                }
+
+                // Prioridad Z: ¿El sprite va detrás del fondo?
+                // Si objBehindBg es true, el sprite SOLO se dibuja si el píxel del fondo era color 0 (blanco)
+                if (objBehindBg) {
+                    uint32_t bgColor = framebuffer[(ly * GB_WIDTH) + pixelX];
+                    if (bgColor != GB_COLOR_0) continue;
+                }
+
+                // Finalmente, plasmamos el píxel en el lienzo
+                framebuffer[(ly * GB_WIDTH) + pixelX] = finalColor;
+            }
+        }
+    }
+}
+
 void PPU::drawScanline() {
     // El bit 0 del registro LCDC (0xFF40) controla si el fondo se dibuja o no.
     if ((lcdc & 0x01) == 0) {
@@ -145,6 +239,7 @@ void PPU::step(int cycles) {
                 dots -= 172;
                 currentMode = PPUMode::HBlank;
                 drawScanline(); 
+                drawSprites();
             }
             break;
 

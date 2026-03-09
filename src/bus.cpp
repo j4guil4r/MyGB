@@ -138,6 +138,20 @@ void Bus::write(Word addr, Byte data) {
     // 5. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
 
+        // --- DMA TRANSFER (0xFF46) ---
+        if (addr == 0xFF46) {
+            // El juego nos da el byte alto de la dirección.
+            // Si data es 0xC1, la dirección fuente es 0xC100
+            Word sourceAddress = data << 8; 
+            
+            for (int i = 0; i < 160; i++) {
+                // Usamos nuestro propio Bus::read para sacar el dato, 
+                // y lo metemos directo en la OAM de la PPU
+                ppu.write(0xFE00 + i, this->read(sourceAddress + i));
+            }
+            return;
+        }
+
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             ppu.write(addr, data);
