@@ -5,9 +5,12 @@
 #include <iostream>
 #include <fstream>
 #include "types.h"
+#include "ppu.h"
 
 class Bus {
 public:
+    PPU ppu;
+
     Bus();
     ~Bus() = default;
 
@@ -61,6 +64,12 @@ public:
 
     Byte ly = 0; // 0xFF44 - LCD Y Coordinate
     long long ppuCounter = 0; // Para simular el dibujo de líneas
+
+    // --- JOYPAD ---
+    // Inicializamos todo en 0x0F (puros 1s en los 4 bits bajos = nada presionado)
+    Byte joypadDir = 0x0F;    // Flechas: Abajo(3), Arriba(2), Izquierda(1), Derecha(0)
+    Byte joypadAction = 0x0F; // Acción: Start(3), Select(2), B(1), A(0)
+    Byte joypadSelect = 0xCF; // Lo que el juego nos pide leer (Bits 4 y 5)
 private:
     std::string serialOutput = "";
 };

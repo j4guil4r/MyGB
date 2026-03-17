@@ -1,89 +1,71 @@
-#include <format>
 #include <iostream>
 #include <string>
-#include <filesystem>
+#include <SDL2/SDL.h>
 #include "bus.h"
 #include "cpu.h"
+#include "ui.h"
 
-namespace fs = std::filesystem;
+int main() {
+    UI ui;
+    if (!ui.init(GB_WIDTH, GB_HEIGHT, SCALE)) return -1;
 
-int main () {
-    std::string romsDirectory = "roms/";
-
-    std::vector<std::string> filenames;
-
-    for (const auto& entry: fs::directory_iterator(romsDirectory)) {
-        if(entry.path().extension() == ".gb") {
-            std::string romName = entry.path().filename().string();
-            filenames.emplace_back(romName);
-        }
+    Bus gbBus;
+    std::string romPath = "roms/Tetris.gb"; 
+    
+    if (!gbBus.loadROM(romPath)) {
+        std::cerr << "No se pudo cargar la ROM: " << romPath << "\n";
+        return -1;
     }
 
+    CPU cpu(gbBus);
+    cpu.reset();
 
-    for (const std::string& rom: filenames) {
+    std::cout << "Emulador iniciado. Jugando: " << romPath << "\n";
 
-        Bus gbBus;
-        if (!gbBus.loadROM(romsDirectory + rom)) {
-            std::cout << "No se encontró " << rom;
-            continue;
-        }
+    // 70224 ciclos de reloj de la CPU equivalen exactamente a 1 frame (1/60 de segundo)
+    const int MAX_CYCLES_PER_FRAME = 70224;
+
+    while (ui.isRunning()) {
+
+        ui.handleEvents(gbBus);
+
+        // Ejecutar la CPU por exactamente 1 frame de tiempo
+        int cyclesThisFrame = 0;
         
-        CPU cpu(gbBus);
+        while (cyclesThisFrame < MAX_CYCLES_PER_FRAME) {
+            long long cyclesBefore = cpu.getCycles();
+            
+            cpu.step(); // Ejecutamos 1 instrucción
+            
+            long long deltaCycles = cpu.getCycles() - cyclesBefore;
+            cyclesThisFrame += deltaCycles;
 
-        cpu.reset();
+            gbBus.updateTimers(deltaCycles);
+            gbBus.ppu.step(deltaCycles); 
 
-
-        // Configuración inicial de registers post-BIOS:
-        cpu.A = 0x01;
-        cpu.F = 0xB0; // Z=1, N=0, H=1, C=0
-        cpu.B = 0x00; cpu.C = 0x13;
-        cpu.D = 0x00; cpu.E = 0xD8;
-        cpu.H = 0x01; cpu.L = 0x4D;
-        cpu.SP = 0xFFFE;
-        cpu.PC = 0x0100; // Inicio del juego
-
-        bool testFinished = false;
-        long long maxCycles = 2000000000;
-
-        std::cout << "==== TEST " << rom << " ====\n";
-
-        try {
-            // Loop de ejecución
-            while (!testFinished && cpu.getCycles() < maxCycles) {
-                long long cyclesBefore = cpu.getCycles();
-                
-                cpu.step();
-                
-                long long cyclesAfter = cpu.getCycles();
-                long long deltaCycles = cyclesAfter - cyclesBefore;
-
-                gbBus.updateTimers(deltaCycles);
-                cpu.handleInterrupts();
-
-                // Revisar la salida serial para detener el bucle
-                std::string output = gbBus.getSerialOutput();
-                if (output.find("Passed") != std::string::npos) {
-                    std::cout << "\n[RESULTADO]: ✅ PASSED\n";
-                    testFinished = true;
-                } 
-                else if (output.find("Failed") != std::string::npos) {
-                    std::cout << "\n[RESULTADO]: ❌ FAILED\n";
-                    std::cout << "--- REPORTE DE BLARGG ---\n";
-                    std::cout << output << "\n";
-                    std::cout << "-------------------------\n";
-                    testFinished = true;
-                }
+            // Procesar interrupción de V-Blank (Bit 0)
+            if (gbBus.ppu.requestVBlankInterrupt) {
+                Byte currentIF = gbBus.read(0xFF0F);
+                gbBus.write(0xFF0F, currentIF | 0x01); 
+                gbBus.ppu.requestVBlankInterrupt = false; 
             }
 
-            // Si el while terminó porque superó el límite de maxCycles:
-            if (!testFinished) {
-                std::cout << "\n[RESULTADO]: ⏱️ TIMEOUT (Posible bucle infinito o test muy largo)\n";
+            // --- Procesar interrupción de STAT (Bit 1) ---
+            if (gbBus.ppu.requestStatInterrupt) {
+                gbBus.write(0xFF0F, gbBus.read(0xFF0F) | 0x02); 
+                gbBus.ppu.requestStatInterrupt = false;
             }
 
-        } catch (const std::exception& e) {
-            // Si OP_UNKNOWN hace throw, el bucle se rompe y cae aquí
-            std::cout << "\n[RESULTADO]: 💥 CRASH -> " << e.what() << "\n";
+            cpu.handleInterrupts();
         }
+
+        // Terminó el frame. ¿La PPU armó un cuadro nuevo?
+        ui.render(gbBus);
+        gbBus.ppu.frameReady = false;
+
+        SDL_Delay(16); 
     }
+
+    std::cout << "Emulador cerrado correctamente.\n";
     return 0;
 }

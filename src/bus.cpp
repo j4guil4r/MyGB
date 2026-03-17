@@ -41,7 +41,7 @@ Byte Bus::read(Word addr) const {
     }
     // 2. VRAM (8000 - 9FFF)
     else if (addr >= 0x8000 && addr <= 0x9FFF) {
-        return vram[addr - 0x8000];
+        return ppu.read(addr); 
     }
     // 3. External RAM (A000 - BFFF)
     else if (addr >= 0xA000 && addr <= 0xBFFF) {
@@ -57,7 +57,7 @@ Byte Bus::read(Word addr) const {
     }
     // 6. OAM (FE00 - FE9F)
     else if (addr >= 0xFE00 && addr <= 0xFE9F) {
-        return oam[addr - 0xFE00];
+        return ppu.read(addr);
     }
     // 7. Unusable (FEA0 - FEFF)
     else if (addr >= 0xFEA0 && addr <= 0xFEFF) {
@@ -66,6 +66,27 @@ Byte Bus::read(Word addr) const {
 
     // 8. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
+
+        // --- JOYPAD ---
+        if (addr == 0xFF00) {
+            Byte result = 0xCF; // Los bits 6 y 7 siempre devuelven 1 en hardware real
+            result &= joypadSelect; // Mantenemos los bits de selección que el juego escribió
+
+            // Si el Bit 4 es 0, el juego quiere leer Direcciones (Flechas)
+            if ((joypadSelect & 0x10) == 0) {
+                result &= joypadDir;
+            }
+            // Si el Bit 5 es 0, el juego quiere leer Acción (A, B, Select, Start)
+            if ((joypadSelect & 0x20) == 0) {
+                result &= joypadAction;
+            }
+            return result;
+        }
+        // --- Registros de la PPU (FF40 - FF4B) ---
+        if (addr >= 0xFF40 && addr <= 0xFF4B) {
+            return ppu.read(addr);
+        }
+
         // Interrupciones
         if (addr == 0xFF0F) return ifRegister;
 
@@ -77,8 +98,6 @@ Byte Bus::read(Word addr) const {
 
         // Serial (Para debug, opcional en lectura)
         if (addr == 0xFF01) return 0;
-
-        if (addr == 0xFF44) return ly;
 
         return 0;
     }
@@ -92,7 +111,7 @@ Byte Bus::read(Word addr) const {
         return ieRegister;
     }
 
-    return 0;
+    return 0xFF;
 }
 
 // EL MAPA DE MEMORIA (ESCRITURA)
@@ -103,7 +122,8 @@ void Bus::write(Word addr, Byte data) {
     }
     // 2. VRAM
     else if (addr >= 0x8000 && addr <= 0x9FFF) {
-        vram[addr - 0x8000] = data;
+        ppu.write(addr, data); 
+        return;
     }
     // 3. WRAM
     else if (addr >= 0xC000 && addr <= 0xDFFF) {
@@ -111,27 +131,52 @@ void Bus::write(Word addr, Byte data) {
     }
     // 4. OAM
     else if (addr >= 0xFE00 && addr <= 0xFE9F) {
-        oam[addr - 0xFE00] = data;
+        ppu.write(addr, data);
+        return;
     }
 
-    // 5. IO REGISTERS (FF00 - FF7F) -> ¡AQUÍ TAMBIÉN!
+    // 5. IO REGISTERS (FF00 - FF7F)
     else if (addr >= 0xFF00 && addr <= 0xFF7F) {
+
+        // --- DMA TRANSFER (0xFF46) ---
+        if (addr == 0xFF46) {
+            // El juego nos da el byte alto de la dirección.
+            // Si data es 0xC1, la dirección fuente es 0xC100
+            Word sourceAddress = data << 8; 
+            
+            for (int i = 0; i < 160; i++) {
+                // Usamos nuestro propio Bus::read para sacar el dato, 
+                // y lo metemos directo en la OAM de la PPU
+                ppu.write(0xFE00 + i, this->read(sourceAddress + i));
+            }
+            return;
+        }
+
+        // --- Registros de la PPU (FF40 - FF4B) ---
+        if (addr >= 0xFF40 && addr <= 0xFF4B) {
+            ppu.write(addr, data);
+            return;
+        }
+
+        // --- JOYPAD ---
+        if (addr == 0xFF00) {
+            // El juego SOLO puede escribir en los bits 4 y 5 para seleccionar qué leer.
+            // Protegemos el resto de los bits.
+            joypadSelect = (data & 0x30) | 0xCF; 
+            return;
+        }
 
         // Serial Output (Debug Blargg)
         if (addr == 0xFF01) {
             auto c = static_cast<char>(data);
-            //std::cout << c;
             serialOutput += c;
         }
 
         // Timers
-        else if (addr == 0xFF04) { div = 0; divCounter = 0; } // DIV se resetea al escribir
+        else if (addr == 0xFF04) { div = 0; divCounter = 0; }
         else if (addr == 0xFF05) tima = data;
         else if (addr == 0xFF06) tma = data;
-        else if (addr == 0xFF07) {
-            // std::cout << "Escribiendo TAC: " << (int)data << "\n";
-            tac = data;
-        }
+        else if (addr == 0xFF07) tac = data;
 
         // Interrupciones
         else if (addr == 0xFF0F) ifRegister = data;
@@ -146,7 +191,6 @@ void Bus::write(Word addr, Byte data) {
         ieRegister = data;
     }
 }
-
 void Bus::requestInterrupt(int bit) {
     // Debug: Chivatear si es el Timer (Bit 2)
     /*if (bit == 2) {
