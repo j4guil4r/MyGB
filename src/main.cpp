@@ -5,7 +5,7 @@
 #include "cpu.h"
 #include "ui.h"
 
-int main(int argc, char* argv[]) {
+int main() {
     UI ui;
     if (!ui.init(GB_WIDTH, GB_HEIGHT, SCALE)) return -1;
 
@@ -43,11 +43,17 @@ int main(int argc, char* argv[]) {
             gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles); 
 
-            // Procesar interrupciones de la PPU
+            // Procesar interrupción de V-Blank (Bit 0)
             if (gbBus.ppu.requestVBlankInterrupt) {
                 Byte currentIF = gbBus.read(0xFF0F);
                 gbBus.write(0xFF0F, currentIF | 0x01); 
                 gbBus.ppu.requestVBlankInterrupt = false; 
+            }
+
+            // --- Procesar interrupción de STAT (Bit 1) ---
+            if (gbBus.ppu.requestStatInterrupt) {
+                gbBus.write(0xFF0F, gbBus.read(0xFF0F) | 0x02); 
+                gbBus.ppu.requestStatInterrupt = false;
             }
 
             cpu.handleInterrupts();

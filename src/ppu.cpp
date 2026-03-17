@@ -38,7 +38,7 @@ uint32_t PPU::getTilePixelColor(Byte tileNumber, Word tileDataBase, Byte line, B
         tileLocation = 0x9000 + (static_cast<int8_t>(tileNumber) * 16);
     }
 
-    // Leer los 2 bytes de la línea (¡Usando tu nuevo readVRAM!)
+    // Leer los 2 bytes de la línea
     Byte data1 = readVRAM(tileLocation + (line * 2));
     Byte data2 = readVRAM(tileLocation + (line * 2) + 1);
 
@@ -283,13 +283,16 @@ void PPU::step(int cycles) {
             break;
     }
 
-    // 1. Actualizamos de forma segura los bits 0 y 1 del STAT con el modo actual
+    // Actualizamos de forma segura los bits 0 y 1 del STAT con el modo actual
     setMode(static_cast<Byte> (currentMode));
 
-    // 2. Comprobamos flag LY == LYC (Bit 2 del STAT)
+    // Comprobamos flag LY == LYC (Bit 2 del STAT)
     if (ly == lyc) {
         stat |= 0x04; // Encender bit 2
-        // TODO: Disparar interrupción STAT si el bit 6 está encendido
+        // Si el bit 6 del STAT está encendido, disparamos la interrupción
+        if (stat & 0x40) {
+            requestStatInterrupt = true;
+        }
     } else {
         stat &= ~0x04; // Apagar bit 2
     }
@@ -327,7 +330,7 @@ void PPU::write(Word address, Byte value) {
         case 0xFF43: scx = value; break;
         case 0xFF44: break; // LY es Read-Only, no se puede escribir
         case 0xFF45: lyc = value; break;
-        case 0xFF46: dma = value; break; // TODO: Implementar transferencia DMA
+        case 0xFF46: dma = value; break; // DMA manejado en bus.cpp
         case 0xFF47: bgp = value; break;
         case 0xFF48: obp0 = value; break;
         case 0xFF49: obp1 = value; break;

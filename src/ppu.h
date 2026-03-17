@@ -21,6 +21,7 @@ public:
     std::array<uint32_t, GB_WIDTH * GB_HEIGHT> framebuffer {};
     bool frameReady = false;
     bool requestVBlankInterrupt = false;
+    bool requestStatInterrupt = false;
 
     // --- REGISTROS DE HARDWARE (0xFF40 - 0xFF4B) ---
     Byte lcdc = 0x91; // 0xFF40 - LCD Control (Pantalla encendida por defecto)
