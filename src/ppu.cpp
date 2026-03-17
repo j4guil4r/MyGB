@@ -5,6 +5,14 @@ constexpr uint32_t GB_COLOR_1 = 0xFFAAAAAA;  // Gris claro
 constexpr uint32_t GB_COLOR_2 = 0xFF555555;  // Gris oscuro
 constexpr uint32_t GB_COLOR_3 = 0xFF000000;  // Negro
 
+constexpr uint32_t GB_PALETTE[4] = {
+    GB_COLOR_0,
+    GB_COLOR_1,
+    GB_COLOR_2,
+    GB_COLOR_3
+};
+
+
 PPU::PPU() {
     reset();
 }
@@ -12,6 +20,36 @@ PPU::PPU() {
 
 PPU::~PPU(){}
 
+inline int PPU::decode2bpp(Byte lo, Byte hi, int bit) {
+    return ((hi >> bit) & 1) << 1 | ((lo >> bit) & 1);
+}
+
+inline Byte PPU::readVRAM(Word addr){
+    return vram[addr - 0x8000];
+}
+
+// Devuelve el color ARGB final de un píxel específico dentro de un Tile
+uint32_t PPU::getTilePixelColor(Byte tileNumber, Word tileDataBase, Byte line, Byte xPixel, Byte paletteReg) {
+    // Calcular ubicación real del Tile
+    Word tileLocation = tileDataBase;
+    if (tileDataBase == 0x8000) {
+        tileLocation += (tileNumber * 16);
+    } else {
+        tileLocation = 0x9000 + (static_cast<int8_t>(tileNumber) * 16);
+    }
+
+    // Leer los 2 bytes de la línea (¡Usando tu nuevo readVRAM!)
+    Byte data1 = readVRAM(tileLocation + (line * 2));
+    Byte data2 = readVRAM(tileLocation + (line * 2) + 1);
+
+    // Decodificar
+    int colorBit = 7 - (xPixel % 8);
+    int colorNum = decode2bpp(data1, data2, colorBit);
+
+    // Aplicar paleta y retornar color final
+    int paletteColor = (paletteReg >> (colorNum * 2)) & 0x03;
+    return GB_PALETTE[paletteColor];
+}
 
 void PPU::reset() {
     framebuffer.fill(GB_COLOR_0); 
@@ -86,9 +124,7 @@ void PPU::drawSprites() {
                 if (pixelX < 0 || pixelX >= 160) continue;
 
                 // Extraemos el color ID (igual que con el fondo)
-                int colorBit0 = (data1 >> colorBit) & 0x01;
-                int colorBit1 = (data2 >> colorBit) & 0x01;
-                int colorNum = (colorBit1 << 1) | colorBit0;
+                int colorNum = decode2bpp(data1, data2, colorBit);
 
                 // El Color 0 es transparente en los Sprites
                 if (colorNum == 0) continue;
@@ -96,13 +132,7 @@ void PPU::drawSprites() {
                 // Determinar el color final usando la paleta seleccionada
                 int paletteColor = (palette >> (colorNum * 2)) & 0x03;
                 
-                uint32_t finalColor;
-                switch (paletteColor) {
-                    case 0: finalColor = GB_COLOR_0; // Blanco
-                    case 1: finalColor = GB_COLOR_1; // Gris Claro
-                    case 2: finalColor = GB_COLOR_2; // Gris Oscuro
-                    case 3: finalColor = GB_COLOR_3; // Negro
-                }
+                uint32_t finalColor = GB_PALETTE[paletteColor];
 
                 // Prioridad Z: ¿El sprite va detrás del fondo?
                 // Si objBehindBg es true, el sprite SOLO se dibuja si el píxel del fondo era color 0 (blanco)
@@ -147,72 +177,53 @@ void PPU::drawScanline() {
 
     // 5. Dibujar los 160 píxeles horizontales de esta línea (ly)
     for (int x = 0; x < GB_WIDTH; x++) {
-        
-        // Calcular la posición X real sumando el Scroll Horizontal (SCX)
         Byte xPos = x + scx;
-
-        // Dividimos entre 8 para saber en qué "columna de Tiles" estamos (de la 0 a la 31)
-        Word tileCol = xPos / 8;
-
-        // --- A. BUSCAR EL NÚMERO DEL TILE EN EL MAPA ---
-        Word tileAddress = tileMapBase + tileRow + tileCol;
+        Word tileAddress = tileMapBase + tileRow + (xPos >> 3);
         
-        // ¡OJO! La VRAM en nuestra clase PPU empieza en 0x8000, así que restamos ese offset
-        // para leer nuestro arreglo `vram` interno.
-        Byte tileNumber = vram[tileAddress - 0x8000];
-
-        // --- B. BUSCAR LOS PÍXELES DEL TILE (Decodificación 2bpp) ---
-        Word tileLocation = tileDataBase;
-        
-        if ((lcdc & 0x10) != 0) {
-            // Si usamos la base 0x8000, los números de Tile son sin signo (0 a 255)
-            // Cada Tile ocupa 16 bytes.
-            tileLocation += (tileNumber * 16);
-        } else {
-            // Si usamos la base 0x8800, los números son CON signo (-128 a 127)
-            // y la base real empieza en 0x9000.
-            auto signedTileNum = static_cast<int8_t>(tileNumber);
-            tileLocation = 0x9000 + (signedTileNum * 16);
-        }
-
-        // ¿Qué línea específica de las 8 que tiene el Tile estamos dibujando? (0 a 7)
+        Byte tileNumber = readVRAM(tileAddress);
         Byte line = yPos % 8;
 
-        // Leemos los 2 bytes que forman la línea de este Tile (cada línea ocupa 2 bytes)
-        Byte data1 = vram[(tileLocation + (line * 2)) - 0x8000];     // Byte bajo
-        Byte data2 = vram[(tileLocation + (line * 2) + 1) - 0x8000]; // Byte alto
-
-        // --- C. OBTENER EL COLOR DEL PÍXEL (El algoritmo que no entendías) ---
-        // ¿Qué píxel horizontal del Tile estamos dibujando? (0 a 7, donde 0 es la izquierda)
-        // Como el bit 7 (el de más a la izquierda) corresponde al píxel 0, invertimos el índice:
-        int colorBit = 7 - (xPos % 8);
-
-        // Extraemos el bit correspondiente del data1 y data2, y los unimos
-        int colorBit0 = (data1 >> colorBit) & 0x01;
-        int colorBit1 = (data2 >> colorBit) & 0x01;
-        
-        int colorNum = (colorBit1 << 1) | colorBit0; // El resultado es 0, 1, 2 o 3
-
-        // --- D. APLICAR LA PALETA (BGP - 0xFF47) ---
-        // La Game Boy permite a los juegos cambiar cómo se ven los colores 0, 1, 2 y 3.
-        // El registro BGP contiene la paleta actual.
-        // Extraemos los 2 bits correspondientes de la paleta:
-        int paletteColor = (bgp >> (colorNum * 2)) & 0x03;
-
-        // --- E. PINTAR EN SDL2 ---
-        // Asignamos un color real en formato ARGB dependiendo del valor final (0 a 3)
-        uint32_t finalColor;
-        switch (paletteColor) {
-            case 0: finalColor = GB_COLOR_0; break;
-            case 1: finalColor = GB_COLOR_1; break;
-            case 2: finalColor = GB_COLOR_2; break;
-            case 3: finalColor = GB_COLOR_3; break;
-        }
-
-        // Guardamos el píxel en nuestro lienzo de SDL2
-        framebuffer[(ly * GB_WIDTH) + x] = finalColor;
+        framebuffer[(ly * GB_WIDTH) + x] = getTilePixelColor(tileNumber, tileDataBase, line, xPos, bgp);
     }
 }
+
+void PPU::drawWindow() {
+    // 1. ¿Está encendida la Ventana?
+    // El bit 5 del LCDC (0xFF40) controla si la ventana es visible.
+    if ((lcdc & 0x20) == 0) return;
+
+    // 2. ¿La línea que estamos dibujando ahora mismo (LY) cruzó el borde de la ventana (WY)?
+    if (ly < wy) return; // Si la ventana empieza más abajo, no hacemos nada todavía
+
+    // 3. ¿Dónde está el Mapa de la Ventana?
+    // El bit 6 del LCDC nos dice si el mapa base está en 0x9800 o 0x9C00
+    Word tileMapBase = (lcdc & 0x40) ? 0x9C00 : 0x9800;
+
+    // 4. ¿Dónde están los gráficos? (Igual que el fondo, bit 4)
+    Word tileDataBase = (lcdc & 0x10) ? 0x8000 : 0x8800;
+
+    // La posición Y interna de la ventana (desde su propio "borde superior")
+    Byte windowY = ly - wy;
+    
+    // Calculamos qué fila de Tiles del mapa nos toca leer
+    Word tileRow = (windowY / 8) * 32;
+
+    int realWx = wx - 7;
+
+    // 5. Dibujar los 160 píxeles de la línea
+    for (int x = 0; x < GB_WIDTH; x++) {
+        if (x < realWx) continue;
+
+        Byte windowX = x - realWx;
+        Word tileAddress = tileMapBase + tileRow + (windowX >> 3);
+        
+        Byte tileNumber = readVRAM(tileAddress);
+        Byte line = windowY % 8;
+
+        framebuffer[(ly * GB_WIDTH) + x] = getTilePixelColor(tileNumber, tileDataBase, line, windowX, bgp);
+    }
+}
+
 
 void PPU::step(int cycles) {
     // Si la pantalla está apagada 
@@ -239,6 +250,7 @@ void PPU::step(int cycles) {
                 dots -= 172;
                 currentMode = PPUMode::HBlank;
                 drawScanline(); 
+                drawWindow();
                 drawSprites();
             }
             break;

@@ -55,6 +55,12 @@ private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
     void drawScanline();
     void drawSprites();
+    void drawWindow();
+
+    // utils:
+    inline int decode2bpp(Byte lo, Byte hi, int bit);
+    inline Byte readVRAM(Word addr);
+    uint32_t getTilePixelColor(Byte tileNumber, Word tileDataBase, Byte line, Byte xPixel, Byte paletteReg);
 
     enum class PPUMode {
         HBlank = 0,
