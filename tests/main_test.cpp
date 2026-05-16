@@ -23,7 +23,7 @@ int main () {
     for (const std::string& rom: filenames) {
 
         Bus gbBus;
-        if (!gbBus.loadROM(romsDirectory + rom)) {
+        if (!gbBus.cartridge.loadROM(romsDirectory + rom)) {
             std::cout << "No se encontró " << rom;
             continue;
         }

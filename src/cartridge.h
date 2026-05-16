@@ -9,7 +9,7 @@ private:
     std::vector<Byte> rom;
 
     // Metadatos del header
-    std:string title;
+    std::string title;
     Byte cartridgeType; // chip mbc
     Byte romSize; // peso | paginas de 16KB
     Byte ramSize; // si existe, tamaño de ram
@@ -27,4 +27,4 @@ public:
     // getters
     std::string getTitle() const {return title;}
     Byte getType() const {return cartridgeType;}
-}
+};

@@ -17,12 +17,13 @@ bool Cartridge::loadROM(const std::string& filepath){
     file.seekg(0, std::ios::beg);
 
     rom.resize(size);
-    memblock = reinterpret_cast<char*> rom.data(); 
+    memblock = reinterpret_cast<char*>(rom.data()); 
     if(!file.read(memblock, size)) {
         return false;
     }
 
     parseHeader();
+    // file close?
     return true;
 }
 

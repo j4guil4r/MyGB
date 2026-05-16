@@ -12,7 +12,7 @@ int main() {
     Bus gbBus;
     std::string romPath = "roms/Tetris.gb"; 
     
-    if (!gbBus.loadROM(romPath)) {
+    if (!gbBus.cartridge.loadROM(romPath)) {
         std::cerr << "No se pudo cargar la ROM: " << romPath << "\n";
         return -1;
     }

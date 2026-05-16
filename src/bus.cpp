@@ -7,37 +7,15 @@ Bus::Bus() {
     wram.fill(0);
     oam.fill(0);
     hram.fill(0);
-
-    // Reservamos un mínimo para evitar errores si leemos sin cargar ROM
-    cartridgeMemory.resize(32 * 1024, 0);
 }
 
-// Carga del archivo .gb al vector de memoria
-bool Bus::loadROM(const std::string& filename) {
-    std::ifstream file(filename, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo " << filename << "\n";
-        return false;
-    }
 
-    std::streampos size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::cout << "Cargando ROM: " << filename << " (" << size << " bytes)\n";
-
-    cartridgeMemory.resize(size);
-    file.read(reinterpret_cast<char*>(cartridgeMemory.data()), size);
-    file.close();
-    return true;
-}
 
 // EL MAPA DE MEMORIA (LECTURA)
 Byte Bus::read(Word addr) const {
     // 1. ROM (0000 - 7FFF)
     if (addr < 0x8000) {
-        if (addr < cartridgeMemory.size())
-            return cartridgeMemory[addr];
-        return 0;
+        return cartridge.read(addr);
     }
     // 2. VRAM (8000 - 9FFF)
     else if (addr >= 0x8000 && addr <= 0x9FFF) {
