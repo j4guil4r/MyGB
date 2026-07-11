@@ -71,4 +71,6 @@ private:
     };
 
     PPUMode currentMode = PPUMode::OAM;
+
+    bool prevStatLine = false;
 };

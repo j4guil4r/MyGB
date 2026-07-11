@@ -23,7 +23,7 @@ Byte Bus::read(Word addr) const {
     }
     // 3. External RAM (A000 - BFFF)
     else if (addr >= 0xA000 && addr <= 0xBFFF) {
-        return 0; // TODO: RAM de Cartucho
+        return cartridge.read(addr);
     }
     // 4. WRAM (C000 - DFFF)
     else if (addr >= 0xC000 && addr <= 0xDFFF) {
@@ -96,6 +96,7 @@ Byte Bus::read(Word addr) const {
 void Bus::write(Word addr, Byte data) {
     // 1. ROM
     if (addr < 0x8000) {
+        cartridge.write(addr, data);
         return;
     }
     // 2. VRAM
@@ -103,6 +104,12 @@ void Bus::write(Word addr, Byte data) {
         ppu.write(addr, data); 
         return;
     }
+
+    else if (addr >= 0xA000 && addr <= 0xBFFF) {
+        cartridge.write(addr, data);
+        return;
+    }
+    
     // 3. WRAM
     else if (addr >= 0xC000 && addr <= 0xDFFF) {
         wram[addr - 0xC000] = data;
@@ -220,6 +227,7 @@ void Bus::updateTimers(const long long cycles) {
         }
     }
 
+    /*
     // --- SIMULACIÓN PPU (Simple) ---
     ppuCounter += cycles;
     // Una línea tarda 456 ciclos de CPU
@@ -233,6 +241,7 @@ void Bus::updateTimers(const long long cycles) {
         // Si pasamos de la línea 153, volvemos a empezar (Frame nuevo)
         else if (ly > 153) ly = 0;
     }
+    */
 }
 
 std::string Bus::getSerialOutput () const {
