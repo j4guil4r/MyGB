@@ -16,7 +16,7 @@ find_package(SDL2 REQUIRED)
 
 enable_testing()
 
-set(CORE_SOURCES "src/cpu.cpp" "src/bus.cpp" "src/ppu.cpp")
+set(CORE_SOURCES "src/cpu.cpp" "src/bus.cpp" "src/ppu.cpp" "src/cartridge.cpp")
 
 # ---  EMULADOR (Tetris) ---
 add_executable(MyGB src/main.cpp src/ui.cpp ${CORE_SOURCES})

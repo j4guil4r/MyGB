@@ -937,27 +937,27 @@ void CPU::handleInterrupts() {
 
         // Bit 0: VBlank (INT 40h)
         if (interruptMask & 0x01) {
-            bus.write(0xFF0F, IF & ~0x01); // Limpiamos el flag (ack)
+            bus.write(0xFF0F, bus.read(0xFF0F) & ~0x01); // Limpiamos el flag (ack)
             vector = 0x0040;
         }
         // Bit 1: LCD STAT (INT 48h)
         else if (interruptMask & 0x02) {
-            bus.write(0xFF0F, IF & ~0x02);
+            bus.write(0xFF0F, bus.read(0xFF0F) & ~0x02);
             vector = 0x0048;
         }
         // Bit 2: Timer (INT 50h)
         else if (interruptMask & 0x04) {
-            bus.write(0xFF0F, IF & ~0x04);
+            bus.write(0xFF0F, bus.read(0xFF0F) & ~0x04);
             vector = 0x0050;
         }
         // Bit 3: Serial (INT 58h)
         else if (interruptMask & 0x08) {
-            bus.write(0xFF0F, IF & ~0x08);
+            bus.write(0xFF0F, bus.read(0xFF0F) & ~0x08);
             vector = 0x0058;
         }
         // Bit 4: Joypad (INT 60h)
         else if (interruptMask & 0x10) {
-            bus.write(0xFF0F, IF & ~0x10);
+            bus.write(0xFF0F, bus.read(0xFF0F) & ~0x10);
             vector = 0x0060;
         }
 

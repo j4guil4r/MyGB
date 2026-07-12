@@ -286,13 +286,33 @@ void PPU::step(int cycles) {
     // Actualizamos de forma segura los bits 0 y 1 del STAT con el modo actual
     setMode(static_cast<Byte> (currentMode));
 
-    // Comprobamos flag LY == LYC (Bit 2 del STAT)
+    // 1. Calculamos la señal STAT combinando TODAS las condiciones habilitadas
+    bool currentStatLine = false;
+
+    // Bit 6: Alarma de coincidencia LY == LYC
+    if ((stat & 0x40) && (ly == lyc)) currentStatLine = true;
+    
+    // Bit 5: Alarma del Modo 2 (OAM) -> ¡La que usa Mario!
+    if ((stat & 0x20) && currentMode == PPUMode::OAM) currentStatLine = true;
+    
+    // Bit 4: Alarma del Modo 1 (V-Blank)
+    if ((stat & 0x10) && currentMode == PPUMode::VBlank) currentStatLine = true;
+    
+    // Bit 3: Alarma del Modo 0 (H-Blank)
+    if ((stat & 0x08) && currentMode == PPUMode::HBlank) currentStatLine = true;
+
+    // 2. ¡EL FLANCO DE SUBIDA!
+    // Solo disparamos la interrupción en el instante en que la señal pasa de apagada a encendida
+    if (currentStatLine && !prevStatLine) {
+        requestStatInterrupt = true;
+    }
+    
+    // 3. Guardamos el estado para el siguiente ciclo
+    prevStatLine = currentStatLine;
+    
+    // 4. Actualizamos el Bit 2 de STAT puramente para que el juego pueda leerlo
     if (ly == lyc) {
-        stat |= 0x04; // Encender bit 2
-        // Si el bit 6 del STAT está encendido, disparamos la interrupción
-        if (stat & 0x40) {
-            requestStatInterrupt = true;
-        }
+        stat |= 0x04;
     } else {
         stat &= ~0x04; // Apagar bit 2
     }

@@ -6,6 +6,7 @@
 #include <fstream>
 #include "types.h"
 #include "ppu.h"
+#include "cartridge.h"
 
 class Bus {
 public:
@@ -14,10 +15,11 @@ public:
     Bus();
     ~Bus() = default;
 
+    Cartridge cartridge;    
+
     [[nodiscard]] Byte read(Word addr) const;
     void write(Word addr, Byte data);
 
-    bool loadROM(const std::string& filename);
     std::string getSerialOutput () const;
     void clearSerialOutput() { serialOutput = ""; }
 
@@ -38,9 +40,6 @@ public:
     // HRAM (127 bytes) - High RAM (Variables ultra rápidas)
     // Rango: FF80 - FFFE
     std::array<Byte, 127> hram;
-
-    // El Cartucho (Tamaño dinámico)
-    std::vector<Byte> cartridgeMemory;
 
     // Interrupt Enable Register (FFFF)
     Byte ieRegister = 0;

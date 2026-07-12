@@ -13,7 +13,12 @@ int main () {
     std::vector<std::string> filenames;
 
     for (const auto& entry: fs::directory_iterator(romsDirectory)) {
-        if(entry.path().extension() == ".gb" && entry.path().filename() != "Tetris.gb") {
+        if(entry.path().extension() == ".gb" 
+        && (entry.path().filename() != "Tetris.gb" 
+        && entry.path().filename() != "SuperMarioLand.gb"
+        && entry.path().filename() != "PokemonRedVersion.gb"
+        )
+    ) {
             std::string romName = entry.path().filename().string();
             filenames.emplace_back(romName);
         }
@@ -23,7 +28,7 @@ int main () {
     for (const std::string& rom: filenames) {
 
         Bus gbBus;
-        if (!gbBus.loadROM(romsDirectory + rom)) {
+        if (!gbBus.cartridge.loadROM(romsDirectory + rom)) {
             std::cout << "No se encontró " << rom;
             continue;
         }
