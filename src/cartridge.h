@@ -23,11 +23,17 @@ private:
 
     void parseHeader();
 
+    // --- Persistencia ---
+    std::string saveFilepath;
+    bool hasBattery = false;
+    void loadBattery();
+
 public:
     Cartridge();
-    ~Cartridge() = default;
+    ~Cartridge();
 
     bool loadROM(const std::string& filepath);
+    void saveBattery();
     Byte read(Word address) const;
     void write(Word address, Byte value);
 

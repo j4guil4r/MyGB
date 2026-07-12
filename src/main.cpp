@@ -10,7 +10,7 @@ int main() {
     if (!ui.init(GB_WIDTH, GB_HEIGHT, SCALE)) return -1;
 
     Bus gbBus;
-    std::string romPath = "roms/SuperMarioLand.gb"; 
+    std::string romPath = "roms/PokemonRedVersion.gb"; 
     
     if (!gbBus.cartridge.loadROM(romPath)) {
         std::cerr << "No se pudo cargar la ROM: " << romPath << "\n";

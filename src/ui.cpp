@@ -57,9 +57,8 @@ void UI::handleEvents(Bus& gbBus) {
                 case SDLK_DOWN:  gbBus.joypadDir &= ~0x08; buttonPressed = true; break;
                 case SDLK_z:     gbBus.joypadAction &= ~0x01; buttonPressed = true; break; // Botón A
                 case SDLK_x:     gbBus.joypadAction &= ~0x02; buttonPressed = true; break; // Botón B
-                case SDLK_RSHIFT:
-                case SDLK_LSHIFT:gbBus.joypadAction &= ~0x04; buttonPressed = true; break; // Select
-                case SDLK_RETURN:gbBus.joypadAction &= ~0x08; buttonPressed = true; break; // Start
+                case SDLK_a:     gbBus.joypadAction &= ~0x04; buttonPressed = true; break; // Select (Tecla A)
+                case SDLK_s:     gbBus.joypadAction &= ~0x08; buttonPressed = true; break; // Start  (Tecla S)
             }
             
             // Si presionamos un botón, disparamos la Interrupción del Joypad (Bit 4 de IF)
@@ -77,9 +76,8 @@ void UI::handleEvents(Bus& gbBus) {
                 case SDLK_DOWN:  gbBus.joypadDir |= 0x08; break;
                 case SDLK_z:     gbBus.joypadAction |= 0x01; break; // Botón A
                 case SDLK_x:     gbBus.joypadAction |= 0x02; break; // Botón B
-                case SDLK_RSHIFT:
-                case SDLK_LSHIFT:gbBus.joypadAction |= 0x04; break; // Select
-                case SDLK_RETURN:gbBus.joypadAction |= 0x08; break; // Start
+                case SDLK_a:     gbBus.joypadAction |= 0x04; break; // Select (Tecla A)
+                case SDLK_s:     gbBus.joypadAction |= 0x08; break; // Start  (Tecla S)
             }
         }
     }

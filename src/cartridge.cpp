@@ -8,6 +8,33 @@ Cartridge::Cartridge() {
     ramSize = 0;
 }
 
+Cartridge::~Cartridge(){
+    saveBattery();
+}
+
+void Cartridge::loadBattery(){
+    if(!hasBattery || externalRAM.empty()) return;
+
+    std::ifstream file(saveFilepath, std::ios::binary);
+    if (file.is_open()) {
+        file.read(reinterpret_cast<char*>(externalRAM.data()), externalRAM.size());
+        std::cout << "-> Bateria cargada exitosamente: " << saveFilepath << "\n";
+    }
+    else {
+        std::cout << "-> No se encontro archivo de guardado previo. Se iniciara una partida nueva.\n";
+    }
+}
+
+void Cartridge::saveBattery() {
+    if (!hasBattery || externalRAM.empty()) return;
+
+    std::ofstream file(saveFilepath, std::ios::binary | std::ios::trunc);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(externalRAM.data()), externalRAM.size());
+        std::cout << "-> Partida guardada en: " << saveFilepath << "\n";
+    }
+}
+
 bool Cartridge::loadROM(const std::string& filepath){
     char* memblock = nullptr;
     std::ifstream file(filepath, std::ios::binary | std::ios::ate);
@@ -23,13 +50,20 @@ bool Cartridge::loadROM(const std::string& filepath){
     }
 
     parseHeader();
+
+    size_t dotPos = filepath.find_last_of('.');
+    if (dotPos != std::string::npos) saveFilepath = filepath.substr(0, dotPos) + ".sav";
+    else saveFilepath = filepath + ".sav";
+
+    if(hasBattery) loadBattery();
+
     return true;
 }
 
 void Cartridge::parseHeader() {
     title = "";
     for(Word i = 0x0134; i <= 0x0143; ++i) {
-        if(rom[0] == 0) break;
+        if(rom[i] == 0) break;
         title += static_cast<char>(rom[i]);
     }
 
@@ -50,6 +84,8 @@ void Cartridge::parseHeader() {
     currentRAMBank = 0;
     ramEnabled = false;
     bankingMode = false;
+
+    hasBattery = (cartridgeType == 0x03 || cartridgeType == 0x0F || cartridgeType == 0x10 || cartridgeType == 0x13);
 
     std::cout << "--- CARTUCHO CARGADO ---\n";
     std::cout << "Titulo: " << title << "\n";
@@ -75,7 +111,11 @@ Byte Cartridge::read(Word address) const {
 
     // 3. RAM Externa (0xA000 a 0xBFFF)
     if (address >= 0xA000 && address <= 0xBFFF) {
-        if (!ramEnabled || externalRAM.empty()) return 0xFF;
+        if (!ramEnabled) return 0xFF;
+
+        if (currentRAMBank >= 0x08) return 0x00;
+
+        if (externalRAM.empty()) return 0xFF;
         
         Word offset = address - 0xA000;
         uint32_t targetAddress = (currentRAMBank * 0x2000) + offset;
@@ -88,46 +128,62 @@ Byte Cartridge::read(Word address) const {
 }
 
 void Cartridge::write(Word address, Byte value) {
-    // Solo manejamos MBC1 por ahora (Tipos 1, 2 y 3)
-    if (cartridgeType >= 0x01 && cartridgeType <= 0x03) {
+    bool isMBC1 = (cartridgeType >= 0x01 && cartridgeType <= 0x03);
+    bool isMBC3 = (cartridgeType >= 0x0F && cartridgeType <= 0x13);
+
+    if (isMBC1 || isMBC3) {
         
-        // Comando 1: Habilitar/Deshabilitar RAM (0x0000 - 0x1FFF)
+        // Comando 1: Habilitar/Deshabilitar RAM y Reloj (0x0000 - 0x1FFF)
         if (address <= 0x1FFF) {
-            // Se habilita escribiendo exactamente 0x0A en los 4 bits bajos
             ramEnabled = ((value & 0x0F) == 0x0A);
         }
         
         // Comando 2: Cambiar de Banco ROM (0x2000 - 0x3FFF)
         else if (address >= 0x2000 && address <= 0x3FFF) {
-            // Tomamos los 5 bits bajos del valor.
-            // OJO: currentROMBank podría tener configurados sus bits altos, no los borramos.
-            currentROMBank = (currentROMBank & 0xE0) | (value & 0x1F);
-            
-            // ¡Trampa de hardware! El banco 0 se traduce como 1.
-            if (currentROMBank == 0) currentROMBank = 1;
-        }
-        
-        // Comando 3: Cambiar Banco RAM o Bits altos del Banco ROM (0x4000 - 0x5FFF)
-        else if (address >= 0x4000 && address <= 0x5FFF) {
-            if (bankingMode) {
-                // Si estamos en modo RAM, cambiamos el currentRAMBank
-                currentRAMBank = value & 0x03;
-            } else {
-                // Si estamos en modo ROM, estos 2 bits forman parte de currentROMBank (bits 5 y 6)
-                currentROMBank = (currentROMBank & 0x1F) | ((value & 0x03) << 5);
+            if (isMBC1) {
+                Byte lower5 = value & 0x1F;
+                if (lower5 == 0) lower5 = 1;
+                currentROMBank = (currentROMBank & 0xE0) | lower5;
+            } else if (isMBC3) {
+                // MBC3 usa 7 bits directos y no tiene el bug de 0x20/0x40/0x60
+                currentROMBank = value & 0x7F;
                 if (currentROMBank == 0) currentROMBank = 1;
             }
         }
         
-        // Comando 4: Modo Banking (0x6000 - 0x7FFF)
+        // Comando 3: Cambiar Banco RAM o Registro del Reloj (0x4000 - 0x5FFF)
+        else if (address >= 0x4000 && address <= 0x5FFF) {
+            if (isMBC1) {
+                if (bankingMode) {
+                    currentRAMBank = value & 0x03;
+                } else {
+                    currentROMBank = (currentROMBank & 0x1F) | ((value & 0x03) << 5);
+                    if (currentROMBank == 0) currentROMBank = 1;
+                }
+            } else if (isMBC3) {
+                // En MBC3, 0x00-0x03 es RAM, 0x08-0x0C es Reloj
+                currentRAMBank = value; 
+            }
+        }
+        
+        // Comando 4: Modo Banking o Latch de Reloj (0x6000 - 0x7FFF)
         else if (address >= 0x6000 && address <= 0x7FFF) {
-            bankingMode = (value & 0x01); // 0 = ROM, 1 = RAM
+            if (isMBC1) {
+                bankingMode = (value & 0x01);
+            } else if (isMBC3) {
+                // Latch Clock del MBC3. Lo ignoramos en esta implementación rápida.
+            }
         }
     }
 
     // Escritura normal en la RAM Externa (Guardar Partida)
     if (address >= 0xA000 && address <= 0xBFFF) {
-        if (!ramEnabled || externalRAM.empty()) return;
+        if (!ramEnabled) return;
+        
+        // Evitamos escribir en el vector de RAM si el juego está mandando datos al Reloj (MBC3)
+        if (currentRAMBank >= 0x08) return;
+        
+        if (externalRAM.empty()) return;
         
         Word offset = address - 0xA000;
         uint32_t targetAddress = (currentRAMBank * 0x2000) + offset;
