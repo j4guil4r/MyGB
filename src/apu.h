@@ -14,6 +14,6 @@ public:
 
     Byte read(Word address) const;
     void write(Word address, Byte value);
-    
+
     void step(int cycles);
-}
+};
