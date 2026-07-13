@@ -25,7 +25,8 @@ target_link_libraries(MyGB PRIVATE ${SDL2_LIBRARIES})
 
 # --- LOS TESTS (Blargg) ---
 add_executable(MyGB_Tests tests/main_test.cpp ${CORE_SOURCES})
-target_include_directories(MyGB_Tests PRIVATE "src")
+target_include_directories(MyGB_Tests PRIVATE ${SDL2_INCLUDE_DIRS} "src")
+target_link_libraries(MyGB_Tests PRIVATE ${SDL2_LIBRARIES})
 
 
 add_test(NAME BlarggTests COMMAND MyGB_Tests)
