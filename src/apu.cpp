@@ -14,6 +14,10 @@ APU::APU(){
     frequency1 = 0;
     volume1 = 0.0f;
     channel1On = false;
+    currentVolume1 = 0;
+    envelopeTimer1 = 0;
+    envelopePeriod1 = 0;
+    envelopeDirection1 = 0;
 
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         std::cerr << "Error crítico: No se pudo inicializar el subsistema de audio SDL: " << SDL_GetError() << "\n";
@@ -91,10 +95,17 @@ void APU::write(Word address, Byte value) {
                 channel1On = true;
                 int vol = (NR12 >> 4) & 0x0F;
                 volume1 = vol / 15.0f; // [0.0,1.0]
+
+                envelopeDirection1 = (NR12 & 0x08) != 0 ? 1 : -1; // Bit 3
+                envelopePeriod1 = NR12 & 0x07;                    // Bits 2-0
+
+                if (envelopePeriod1 != 0) {
+                    envelopeTimer1 = envelopePeriod1 * 65536;
+                }
                 
                 // Calculamos el timer inicial según la fórmula del procesador
                 timer1 = (2048 - frequency1) * 4;
-                std::cout << "[APU] Canal 1 Disparado! Freq: " << frequency1 << " Vol: " << vol << "\n";
+                //std::cout << "[APU] Canal 1 Disparado! Freq: " << frequency1 << " Vol: " << vol << "\n";
             }
             break;
     }
@@ -108,6 +119,27 @@ void APU::step(int cycles) {
     if (timer1 <= 0) {
         timer1 += (2048 - frequency1) * 4;
         dutyPointer1 = (dutyPointer1 + 1) % 8;
+    }
+
+    // 1.5. Actualizar la Envolvente de Volumen
+    if (envelopePeriod1 > 0) {
+        envelopeTimer1 -= cycles;
+        if (envelopeTimer1 <= 0) {
+            // Recargar el temporizador
+            envelopeTimer1 += envelopePeriod1 * 65536;
+            
+            // Subir o bajar el volumen
+            int newVol = currentVolume1 + envelopeDirection1;
+            
+            // Asegurarnos de que no pase de 15 ni baje de 0
+            if (newVol >= 0 && newVol <= 15) {
+                currentVolume1 = newVol;
+                volume1 = currentVolume1 / 15.0f;
+            } else {
+                // Si llegamos al límite (0 o 15), la envolvente se apaga
+                envelopePeriod1 = 0; 
+            }
+        }
     }
 
     // 2. Generar muestras a 44.1 kHz
@@ -136,7 +168,12 @@ void APU::step(int cycles) {
 
     // 3. Enviar a SDL2 cuando tengamos 1024 muestras estéreo (2048 flotantes)
     if (audioBuffer.size() >= 2048) {
-        SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
+        const Uint32 MAX_AUDIO_QUEUE_BYTES = 35280;
+
+        if (SDL_GetQueuedAudioSize(audioDevice) < MAX_AUDIO_QUEUE_BYTES) {
+            SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
+        }
+        
         audioBuffer.clear();
     }
 }

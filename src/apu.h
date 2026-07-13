@@ -25,6 +25,12 @@ private:
     float volume1;      // Volumen actual del canal (0.0 a 1.0)
     bool channel1On;    // ¿Está sonando el canal?
 
+    // --- Variables de la Envolvente ---
+    int currentVolume1;
+    int envelopeTimer1;     // Cuenta regresiva de ciclos para el próximo cambio de volumen
+    int envelopePeriod1;    // Cada cuántos "ticks" de 64Hz cambia el volumen (0 = apagado)
+    int envelopeDirection1; // 1 para subir el volumen, -1 para bajarlo
+
     // Patrones fijos de onda para los 4 Duty Cycles de la Game Boy (8 pasos cada uno)
     const float dutyCycles[4][8] = {
         {-1, -1, -1, -1, -1, -1, -1,  1}, // 12.5%
