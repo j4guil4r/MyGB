@@ -5,12 +5,21 @@
 #include "cpu.h"
 #include "ui.h"
 
-int main() {
+int main(int argc, char* argv[]) {
+
+    if (argc < 2) {
+        std::cerr << "Error: Falta el archivo de la ROM.\n";
+        std::cerr << "Uso correcto: " << argv[0] << " <ruta_a_tu_juego.gb>\n";
+        std::cerr << "Ejemplo: " << argv[0] << " roms/PokemonRedVersion.gb\n";
+        return -1;
+    }
+    
+    std::string romPath = argv[1];
+     
     UI ui;
     if (!ui.init(GB_WIDTH, GB_HEIGHT, SCALE)) return -1;
 
     Bus gbBus;
-    std::string romPath = "roms/PokemonRedVersion.gb"; 
     
     if (!gbBus.cartridge.loadROM(romPath)) {
         std::cerr << "No se pudo cargar la ROM: " << romPath << "\n";
