@@ -6,11 +6,13 @@
 #include <fstream>
 #include "types.h"
 #include "ppu.h"
+#include "apu.h"
 #include "cartridge.h"
 
 class Bus {
 public:
     PPU ppu;
+    APU apu;
 
     Bus();
     ~Bus() = default;

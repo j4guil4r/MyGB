@@ -52,7 +52,8 @@ int main(int argc, char* argv[]) {
             cyclesThisFrame += deltaCycles;
 
             gbBus.updateTimers(deltaCycles);
-            gbBus.ppu.step(deltaCycles); 
+            gbBus.ppu.step(deltaCycles);
+            gbBus.apu.step(deltaCycles); 
 
             // Procesar interrupción de V-Blank (Bit 0)
             if (gbBus.ppu.requestVBlankInterrupt) {

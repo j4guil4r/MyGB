@@ -60,6 +60,12 @@ Byte Bus::read(Word addr) const {
             }
             return result;
         }
+
+        // --- APU ---
+        if (addr >= 0XFF10 && addr <= 0xFF3F) {
+            return apu.read(addr);
+        }
+
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             return ppu.read(addr);
@@ -134,6 +140,12 @@ void Bus::write(Word addr, Byte data) {
                 // y lo metemos directo en la OAM de la PPU
                 ppu.write(0xFE00 + i, this->read(sourceAddress + i));
             }
+            return;
+        }
+
+        // --- APU ---
+        if (addr >= 0xFF10 && addr <= 0xFF3F) {
+            apu.write(addr, data);
             return;
         }
 
