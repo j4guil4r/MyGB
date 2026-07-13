@@ -2,7 +2,9 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <memory>
 #include "types.h"
+#include "mbc/mbc.h"
 
 class Cartridge {
 private:
@@ -15,18 +17,15 @@ private:
     Byte romSize; // peso | paginas de 16KB
     Byte ramSize; // si existe, tamaño de ram
 
-    // --- Estado del MBC1 ---
-    Byte currentROMBank = 1;
-    Byte currentRAMBank = 0;
-    bool ramEnabled = false;
-    bool bankingMode = false;
-
     void parseHeader();
 
     // --- Persistencia ---
     std::string saveFilepath;
     bool hasBattery = false;
     void loadBattery();
+
+    // --- El Polimorfismo mbc ---
+    std::unique_ptr<MBC> mbc;
 
 public:
     Cartridge();
