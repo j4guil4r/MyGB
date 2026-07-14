@@ -285,37 +285,7 @@ void PPU::step(int cycles) {
 
     // Actualizamos de forma segura los bits 0 y 1 del STAT con el modo actual
     setMode(static_cast<Byte> (currentMode));
-
-    // 1. Calculamos la señal STAT combinando TODAS las condiciones habilitadas
-    bool currentStatLine = false;
-
-    // Bit 6: Alarma de coincidencia LY == LYC
-    if ((stat & 0x40) && (ly == lyc)) currentStatLine = true;
-    
-    // Bit 5: Alarma del Modo 2 (OAM) -> ¡La que usa Mario!
-    if ((stat & 0x20) && currentMode == PPUMode::OAM) currentStatLine = true;
-    
-    // Bit 4: Alarma del Modo 1 (V-Blank)
-    if ((stat & 0x10) && currentMode == PPUMode::VBlank) currentStatLine = true;
-    
-    // Bit 3: Alarma del Modo 0 (H-Blank)
-    if ((stat & 0x08) && currentMode == PPUMode::HBlank) currentStatLine = true;
-
-    // 2. ¡EL FLANCO DE SUBIDA!
-    // Solo disparamos la interrupción en el instante en que la señal pasa de apagada a encendida
-    if (currentStatLine && !prevStatLine) {
-        requestStatInterrupt = true;
-    }
-    
-    // 3. Guardamos el estado para el siguiente ciclo
-    prevStatLine = currentStatLine;
-    
-    // 4. Actualizamos el Bit 2 de STAT puramente para que el juego pueda leerlo
-    if (ly == lyc) {
-        stat |= 0x04;
-    } else {
-        stat &= ~0x04; // Apagar bit 2
-    }
+    updateStatInterrupt();
 }
 
 Byte PPU::read(Word address) const {
@@ -345,11 +315,17 @@ void PPU::write(Word address, Byte value) {
     
     switch (address) {
         case 0xFF40: lcdc = value; break;
-        case 0xFF41: stat = (value & 0xF8) | (stat & 0x07); break; // Los bits bajos de STAT son Read-Only
+        case 0xFF41: 
+            stat = (value & 0xF8) | (stat & 0x07); 
+            updateStatInterrupt();
+            break;
         case 0xFF42: scy = value; break;
         case 0xFF43: scx = value; break;
         case 0xFF44: break; // LY es Read-Only, no se puede escribir
-        case 0xFF45: lyc = value; break;
+        case 0xFF45: 
+            lyc = value; 
+            updateStatInterrupt();
+            break;
         case 0xFF46: dma = value; break; // DMA manejado en bus.cpp
         case 0xFF47: bgp = value; break;
         case 0xFF48: obp0 = value; break;
@@ -357,4 +333,26 @@ void PPU::write(Word address, Byte value) {
         case 0xFF4A: wy = value; break;
         case 0xFF4B: wx = value; break;
     }
+}
+
+void PPU::updateStatInterrupt() {
+    // 1. Calcular el bit LY==LYC (Bit 2)
+    if (ly == lyc) {
+        stat |= 0x04;
+    } else {
+        stat &= ~0x04;
+    }
+
+    // 2. Evaluar si se debe disparar la interrupción
+    bool currentStatLine = false;
+    if ((stat & 0x40) && (stat & 0x04)) currentStatLine = true; // LY==LYC
+    if ((stat & 0x20) && currentMode == PPUMode::OAM) currentStatLine = true;
+    if ((stat & 0x10) && currentMode == PPUMode::VBlank) currentStatLine = true;
+    if ((stat & 0x08) && currentMode == PPUMode::HBlank) currentStatLine = true;
+
+    // 3. Disparar (con el flanco que ya tienes)
+    if (currentStatLine && !prevStatLine) {
+        requestStatInterrupt = true;
+    }
+    prevStatLine = currentStatLine;
 }

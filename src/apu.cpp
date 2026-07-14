@@ -14,10 +14,22 @@ APU::APU(){
     frequency1 = 0;
     volume1 = 0.0f;
     channel1On = false;
+
     currentVolume1 = 0;
     envelopeTimer1 = 0;
     envelopePeriod1 = 0;
     envelopeDirection1 = 0;
+
+    sweepTimer1 = 0;
+    sweepPeriod1 = 0;
+    sweepDirection1 = 0;
+    sweepShift1 = 0;
+    sweepEnabled1 = false;
+    shadowFrequency1 = 0;
+
+    lengthTimer1 = 0;
+    lengthEnabled1 = false;
+    lengthCounterTick1 = 0;
 
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         std::cerr << "Error crítico: No se pudo inicializar el subsistema de audio SDL: " << SDL_GetError() << "\n";
@@ -40,7 +52,6 @@ APU::APU(){
     }
     else {
         SDL_PauseAudioDevice(audioDevice, 0);
-        std::cout << "APU Inicializada. Audio Device ID: " << audioDevice << "\n";
     }
 
 }
@@ -59,7 +70,14 @@ Byte APU::read(Word address) const {
         case 0xFF12: return NR12;
         case 0xFF13: return 0xFF;        // NR13 es "Write-Only" (Solo escritura)
         case 0xFF14: return NR14 | 0xBF; // Solo el bit 6 (Length enable) se puede leer
-        case 0xFF26: return soundEnabled ? 0xFF : 0x7F; 
+        case 0xFF24: return NR50; 
+        case 0xFF25: return NR51;
+        case 0xFF26: {
+            Byte status = 0x70;
+            if (soundEnabled) status |= 0x80;
+            if (channel1On) status |= 0x01;
+            return status;
+        }
         default: return 0xFF;
     }
 }
@@ -78,8 +96,16 @@ void APU::write(Word address, Byte value) {
 
     switch (address) {
         case 0xFF10: NR10 = value; break;
-        case 0xFF11: NR11 = value; break;
-        case 0xFF12: NR12 = value; break;
+        case 0xFF11: 
+            NR11 = value; 
+            lengthTimer1 = 64 - (value & 0x3F);
+            break;
+        case 0xFF12: 
+            NR12 = value;
+            if ((NR12 & 0xF8) == 0) {
+                if (channel1On) channel1On = false;
+            }
+            break;
         case 0xFF13: 
             NR13 = value; 
             // Combinar 8 bits bajos
@@ -89,10 +115,15 @@ void APU::write(Word address, Byte value) {
             NR14 = value; 
             // Combinar 3 bits altos (enmascarados con 0x07)
             frequency1 = (frequency1 & 0x00FF) | ((NR14 & 0x07) << 8);
+
+            lengthEnabled1 = (value & 0x40) != 0;
             
             // --- TRIGGER (Bit 7) ---
             if ((value & 0x80) != 0) {
-                channel1On = true;
+                channel1On = ((NR12 & 0xF8) != 0);
+                
+                if (lengthTimer1 == 0) lengthTimer1 = 64;
+
                 int vol = (NR12 >> 4) & 0x0F;
                 volume1 = vol / 15.0f; // [0.0,1.0]
 
@@ -102,12 +133,24 @@ void APU::write(Word address, Byte value) {
                 if (envelopePeriod1 != 0) {
                     envelopeTimer1 = envelopePeriod1 * 65536;
                 }
+
+                // 3. Configurar el Barrido (Sweep) leyendo NR10
+                shadowFrequency1 = frequency1;
+                sweepPeriod1 = (NR10 >> 4) & 0x07;
+                sweepDirection1 = (NR10 & 0x08) != 0 ? -1 : 1; // 0 = Suma (Sube tono), 1 = Resta (Baja tono)
+                sweepShift1 = NR10 & 0x07;
+                
+                // Un tick de Sweep ocurre a 128Hz, que equivale a 32,768 ciclos de CPU.
+                // Si el periodo es 0, el manual indica que el temporizador actúa como si fuera 8.
+                sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 * 32768 : 8 * 32768;
+                sweepEnabled1 = (sweepPeriod1 > 0 || sweepShift1 > 0);
                 
                 // Calculamos el timer inicial según la fórmula del procesador
                 timer1 = (2048 - frequency1) * 4;
-                //std::cout << "[APU] Canal 1 Disparado! Freq: " << frequency1 << " Vol: " << vol << "\n";
             }
             break;
+        case 0xFF24: NR50 = value; break;
+        case 0xFF25: NR51 = value; break;
     }
 }
 
@@ -138,6 +181,43 @@ void APU::step(int cycles) {
             } else {
                 // Si llegamos al límite (0 o 15), la envolvente se apaga
                 envelopePeriod1 = 0; 
+            }
+        }
+    }
+
+    // 1.7. Actualizar el Sweep (Barrido)
+    if (sweepTimer1 > 0) {
+        sweepTimer1 -= cycles;
+        if (sweepTimer1 <= 0) {
+            int period = sweepPeriod1 > 0 ? sweepPeriod1 : 8;
+            sweepTimer1 += period * 32768;
+
+            if (sweepEnabled1 && sweepShift1 > 0) {
+                int newFreq = shadowFrequency1 + (sweepDirection1 * (shadowFrequency1 >> sweepShift1));
+                
+                if (newFreq > 2047) {
+                    channel1On = false;
+                } 
+                else if (sweepPeriod1 > 0) {
+                    // Solo aplicamos la nueva frecuencia si el periodo era mayor a 0
+                    shadowFrequency1 = newFreq;
+                    frequency1 = newFreq;
+                    NR13 = frequency1 & 0xFF;
+                    NR14 = (NR14 & 0xF8) | ((frequency1 >> 8) & 0x07);
+                }
+            }
+        }
+    }
+
+    // 1.8. Actualizar el Length Timer (a 256 Hz)
+    lengthCounterTick1 += cycles;
+    if (lengthCounterTick1 >= 16384) {
+        lengthCounterTick1 -= 16384;
+        
+        if (lengthEnabled1 && lengthTimer1 > 0) {
+            lengthTimer1--;
+            if (lengthTimer1 == 0) {
+                channel1On = false; 
             }
         }
     }
@@ -173,7 +253,7 @@ void APU::step(int cycles) {
         if (SDL_GetQueuedAudioSize(audioDevice) < MAX_AUDIO_QUEUE_BYTES) {
             SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
         }
-        
+
         audioBuffer.clear();
     }
 }

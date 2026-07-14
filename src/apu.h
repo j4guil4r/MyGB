@@ -27,9 +27,26 @@ private:
 
     // --- Variables de la Envolvente ---
     int currentVolume1;
-    int envelopeTimer1;     // Cuenta regresiva de ciclos para el próximo cambio de volumen
-    int envelopePeriod1;    // Cada cuántos "ticks" de 64Hz cambia el volumen (0 = apagado)
-    int envelopeDirection1; // 1 para subir el volumen, -1 para bajarlo
+    int envelopeTimer1;
+    int envelopePeriod1;
+    int envelopeDirection1;
+
+    // --- Variables del Sweep (Barrido) ---
+    int sweepTimer1;
+    int sweepPeriod1;
+    int sweepDirection1;
+    int sweepShift1;
+    bool sweepEnabled1;
+    int shadowFrequency1;
+
+    // --- Variables de Longitud (Length) ---
+    int lengthTimer1;
+    bool lengthEnabled1;
+    int lengthCounterTick1;
+
+    // Variables de Control Maestro
+    Byte NR50 = 0x00;
+    Byte NR51 = 0x00;
 
     // Patrones fijos de onda para los 4 Duty Cycles de la Game Boy (8 pasos cada uno)
     const float dutyCycles[4][8] = {

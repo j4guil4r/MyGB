@@ -534,6 +534,13 @@ void CPU::step() {
     Instruction inst = instructions[opcode];
     cycles += inst.cycles;
     (this->*inst.operate)();
+
+    if (imeDelay > 0) {
+        imeDelay--;
+        if (imeDelay == 0) {
+            ime = true;
+        }
+    }
 }
 
 void CPU::reset() {
@@ -1497,7 +1504,10 @@ void CPU::OP_RST_28H()   { pushStack(PC); PC = 0x0028; }
 void CPU::OP_LDH_A_a8()  { A = bus.read(0xFF00 + fetchByte()); }
 void CPU::OP_POP_AF()    { setAF(popStack()); }
 void CPU::OP_LD_A_C_BUS()    { A = bus.read(0xFF00 + C); }
-void CPU::OP_DI()        { ime = false; }
+void CPU::OP_DI() {
+    ime = false;
+    imeDelay = 0;
+}
 void CPU::OP_PUSH_AF()   { pushStack(getAF()); }
 void CPU::OP_OR_d8()     { or_op(fetchByte()); }
 void CPU::OP_RST_30H()   { pushStack(PC); PC = 0x0030; }
@@ -1514,7 +1524,10 @@ void CPU::OP_LD_HL_SP_r8() {
 }
 void CPU::OP_LD_SP_HL()  { SP = getHL(); }
 void CPU::OP_LD_A_a16()  { A = bus.read(fetchWord()); }
-void CPU::OP_EI()        { ime = true; }
+void CPU::OP_EI(){
+    //ime = true;
+    imeDelay = 2;
+}
 void CPU::OP_CP_d8()     { cp(fetchByte()); }
 void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }
 
