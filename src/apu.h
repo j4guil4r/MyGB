@@ -67,6 +67,27 @@ private:
     bool lengthEnabled2 = false;
     int lengthCounterTick2 = 0;
 
+    // --- CANAL 3: Wave Channel (Forma de Onda Personalizada) ---
+    Byte NR30 = 0x00; // 0xFF1A - DAC Power (Encendido/Apagado)
+    Byte NR31 = 0x00; // 0xFF1B - Longitud de onda
+    Byte NR32 = 0x00; // 0xFF1C - Nivel de Volumen
+    Byte NR33 = 0x00; // 0xFF1D - Frecuencia (8 bits bajos)
+    Byte NR34 = 0x00; // 0xFF1E - Frecuencia (3 bits altos) y Trigger
+
+    bool channel3On = false;
+    int timer3 = 0;
+    int frequency3 = 0;
+    
+    // La Wave RAM tiene 16 bytes, pero cada byte tiene 2 muestras de 4 bits (nibbles).
+    // Por lo tanto, hay 32 muestras en total.
+    int wavePointer = 0; 
+    Byte waveRam[16] = {0}; // Memoria que va de 0xFF30 a 0xFF3F
+
+    // Variables de Longitud CH3
+    int lengthTimer3 = 0;
+    bool lengthEnabled3 = false;
+    int lengthCounterTick3 = 0;
+
     // Variables de Control Maestro
     Byte NR50 = 0x00;
     Byte NR51 = 0x00;

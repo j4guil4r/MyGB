@@ -76,10 +76,17 @@ Byte APU::read(Word address) const {
         case 0xFF19: return NR24 | 0xBF; // Solo el bit de Length es leíble
         case 0xFF24: return NR50; 
         case 0xFF25: return NR51;
+        case 0xFF1A: return NR30 | 0x7F; // Solo Bit 7 es leíble
+        case 0xFF1B: return 0xFF;        // Write-only
+        case 0xFF1C: return NR32 | 0x9F; // Solo Bits 5 y 6 son leíbles
+        case 0xFF1D: return 0xFF;        // Write-only
+        case 0xFF1E: return NR34 | 0xBF; // Solo Bit 6 es leíble
         case 0xFF26: {
             Byte status = 0x70;
             if (soundEnabled) status |= 0x80;
             if (channel1On) status |= 0x01;
+            if (channel2On) status |= 0x02;
+            if (channel3On) status |= 0x04;
             return status;
         }
         default: return 0xFF;
@@ -92,11 +99,18 @@ void APU::write(Word address, Byte value) {
         soundEnabled = ((value >> 7) & 1) == 1;
         if (!soundEnabled) {
             channel1On = false;
+            channel2On = false;
+            channel3On = false;
         }
         return;
     }
     
     if (!soundEnabled) return;
+
+    if (address >= 0xFF30 && address <= 0xFF3F) {
+        waveRam[address - 0xFF30] = value;
+        return;
+    }
 
     switch (address) {
         case 0xFF10: NR10 = value; break;
@@ -193,6 +207,41 @@ void APU::write(Word address, Byte value) {
                 timer2 = (2048 - frequency2) * 4;
             }
             break;
+
+        case 0xFF1A: 
+            NR30 = value; 
+            // Si apagan el DAC del Canal 3, se silencia de inmediato
+            if ((NR30 & 0x80) == 0) channel3On = false;
+            break;
+        case 0xFF1B: 
+            NR31 = value; 
+            lengthTimer3 = 256 - value;
+            break;
+        case 0xFF1C: 
+            NR32 = value; 
+            break;
+        case 0xFF1D: 
+            NR33 = value; 
+            frequency3 = (frequency3 & 0x0700) | NR33;
+            break;
+        case 0xFF1E: 
+            NR34 = value; 
+            frequency3 = (frequency3 & 0x00FF) | ((NR34 & 0x07) << 8);
+            lengthEnabled3 = (value & 0x40) != 0;
+
+            // --- TRIGGER CANAL 3 (Bit 7) ---
+            if ((value & 0x80) != 0) {
+                // Validación del DAC del Canal 3
+                channel3On = ((NR30 & 0x80) != 0);
+                
+                if (lengthTimer3 == 0) lengthTimer3 = 256;
+                
+                // Reiniciamos el puntero de la muestra
+                wavePointer = 0; 
+
+                timer3 = (2048 - frequency3) * 2; 
+            }
+            break;
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }
@@ -217,6 +266,12 @@ void APU::step(int cycles) {
     if (timer2 <= 0) {
         timer2 += (2048 - frequency2) * 4;
         dutyPointer2 = (dutyPointer2 + 1) % 8;
+    }
+
+    timer3 -= cycles;
+    if (timer3 <= 0) {
+        timer3 += (2048 - frequency3) * 2;
+        wavePointer = (wavePointer + 1) % 32;
     }
 
     // ==========================================
@@ -302,6 +357,15 @@ void APU::step(int cycles) {
         }
     }
 
+    lengthCounterTick3 += cycles;
+    if (lengthCounterTick3 >= 16384) {
+        lengthCounterTick3 -= 16384;
+        if (lengthEnabled3 && lengthTimer3 > 0) {
+            lengthTimer3--;
+            if (lengthTimer3 == 0) channel3On = false; 
+        }
+    }
+
     // ==========================================
     // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
     // ==========================================
@@ -313,6 +377,7 @@ void APU::step(int cycles) {
 
         float sample1 = 0.0f;
         float sample2 = 0.0f;
+        float sample3 = 0.0f;
 
         // Muestra del Canal 1
         if (channel1On && volume1 > 0.0f) {
@@ -326,8 +391,24 @@ void APU::step(int cycles) {
             sample2 = dutyCycles[dutyIndex2][dutyPointer2] * volume2;
         }
 
-        // Mezclamos los canales sumándolos y aplicamos un factor para no saturar el audio
-        float finalSample = (sample1 + sample2) * 0.1f;
+        if (channel3On && (NR30 & 0x80)) {
+            Byte waveByte = waveRam[wavePointer/2];
+            int nibble = (wavePointer % 2 == 0) ? (waveByte >> 4):(waveByte & 0x0F);
+            int volumeCode = (NR32 >> 5) & 0x03;
+            int shiftedNibble = 0;
+
+            switch (volumeCode) {
+                case 0: shiftedNibble = 0; break;           // Mute (0%)
+                case 1: shiftedNibble = nibble; break;      // 100% (Muestra intacta)
+                case 2: shiftedNibble = nibble >> 1; break; // 50% (Desplazamos 1 bit a la derecha)
+                case 3: shiftedNibble = nibble >> 2; break; // 25% (Desplazamos 2 bits)
+            }
+
+            // El nibble va de 0 a 15. Lo normalizamos a un rango de -1.0 a 1.0 para el audio flotante.
+            sample3 = (shiftedNibble/7.5f) - 1.0f;
+        }
+
+        float finalSample = (sample1 + sample2 + sample3) * 0.1f;
 
         // Audio Estéreo Básico (Izquierda y Derecha iguales por ahora)
         audioBuffer.push_back(finalSample);
