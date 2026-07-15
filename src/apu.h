@@ -88,6 +88,28 @@ private:
     bool lengthEnabled3 = false;
     int lengthCounterTick3 = 0;
 
+    // --- CANAL 4: Ruido (Noise Channel) ---
+    Byte NR41 = 0x00; // 0xFF20 - Longitud
+    Byte NR42 = 0x00; // 0xFF21 - Volumen y Envolvente
+    Byte NR43 = 0x00; // 0xFF22 - Polinomio (Frecuencia y Aleatoriedad)
+    Byte NR44 = 0x00; // 0xFF23 - Trigger y Control de Longitud
+
+    bool channel4On = false;
+    int timer4 = 0;
+    int lfsr = 0x7FFF; // Se inicializa con todos los 15 bits encendidos
+    float volume4 = 0.0f;
+
+    // --- Variables de la Envolvente CH4 ---
+    int currentVolume4 = 0;
+    int envelopeTimer4 = 0;
+    int envelopePeriod4 = 0;
+    int envelopeDirection4 = 1;
+
+    // --- Variables de Longitud CH4 ---
+    int lengthTimer4 = 0;
+    bool lengthEnabled4 = false;
+    int lengthCounterTick4 = 0;
+
     // Variables de Control Maestro
     Byte NR50 = 0x00;
     Byte NR51 = 0x00;

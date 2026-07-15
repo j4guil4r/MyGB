@@ -81,12 +81,17 @@ Byte APU::read(Word address) const {
         case 0xFF1C: return NR32 | 0x9F; // Solo Bits 5 y 6 son leíbles
         case 0xFF1D: return 0xFF;        // Write-only
         case 0xFF1E: return NR34 | 0xBF; // Solo Bit 6 es leíble
+        case 0xFF20: return 0xFF;        // Write-only
+        case 0xFF21: return NR42;
+        case 0xFF22: return NR43;
+        case 0xFF23: return NR44 | 0xBF; // Solo el bit 6 es leíble
         case 0xFF26: {
             Byte status = 0x70;
             if (soundEnabled) status |= 0x80;
             if (channel1On) status |= 0x01;
             if (channel2On) status |= 0x02;
             if (channel3On) status |= 0x04;
+            if (channel4On) status |= 0x08;
             return status;
         }
         default: return 0xFF;
@@ -101,6 +106,7 @@ void APU::write(Word address, Byte value) {
             channel1On = false;
             channel2On = false;
             channel3On = false;
+            channel4On = false;
         }
         return;
     }
@@ -242,6 +248,48 @@ void APU::write(Word address, Byte value) {
                 timer3 = (2048 - frequency3) * 2; 
             }
             break;
+        // --- ESCRITURA CH4 ---
+        case 0xFF20: 
+            NR41 = value; 
+            lengthTimer4 = 64 - (value & 0x3F);
+            break;
+        case 0xFF21: 
+            NR42 = value;
+            if ((NR42 & 0xF8) == 0) channel4On = false;
+            break;
+        case 0xFF22: 
+            NR43 = value; 
+            break;
+        case 0xFF23: 
+            NR44 = value; 
+            lengthEnabled4 = (value & 0x40) != 0;
+            
+            // --- TRIGGER CANAL 4 (Bit 7) ---
+            if ((value & 0x80) != 0) {
+                channel4On = ((NR42 & 0xF8) != 0);
+                
+                if (lengthTimer4 == 0) lengthTimer4 = 64;
+
+                currentVolume4 = (NR42 >> 4) & 0x0F;
+                volume4 = currentVolume4 / 15.0f;
+
+                envelopeDirection4 = (NR42 & 0x08) != 0 ? 1 : -1;
+                envelopePeriod4 = NR42 & 0x07;
+
+                if (envelopePeriod4 != 0) {
+                    envelopeTimer4 = envelopePeriod4 * 65536;
+                }
+                
+                // Al disparar el canal, el LFSR se reinicia a 15 bits en 1
+                lfsr = 0x7FFF; 
+
+                // Configurar el timer inicial según la fórmula del manual
+                int divisorCode = NR43 & 0x07;
+                int shift = (NR43 >> 4) & 0x0F;
+                int divisor = (divisorCode == 0) ? 8 : (divisorCode * 16);
+                timer4 = divisor << shift;
+            }
+            break;
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }
@@ -274,6 +322,29 @@ void APU::step(int cycles) {
         wavePointer = (wavePointer + 1) % 32;
     }
 
+    timer4 -= cycles;
+    if (timer4 <= 0) {
+        int divisorCode = NR43 & 0x07;
+        int shift = (NR43 >> 4) & 0x0F;
+        int divisor = (divisorCode == 0) ? 8 : (divisorCode * 16);
+        timer4 += divisor << shift;
+
+        // --- ALGORITMO LFSR PARA EL RUIDO ---
+        // Hacemos un XOR entre el Bit 0 y el Bit 1
+        int xorBit = (lfsr & 1) ^ ((lfsr >> 1) & 1);
+        
+        lfsr >>= 1; // Desplazamos todo a la derecha
+        
+        // Insertamos el resultado en el Bit 14
+        lfsr |= (xorBit << 14);
+        
+        // Si el Bit 3 de NR43 está encendido, es el "Modo 7 bits" (Hace sonidos más metálicos)
+        if ((NR43 & 0x08) != 0) {
+            lfsr &= ~0x40;          // Apagamos el Bit 6 temporalmente
+            lfsr |= (xorBit << 6);  // Y le insertamos el resultado
+        }
+    }
+
     // ==========================================
     // 2. ACTUALIZACIÓN DE ENVOLVENTES DE VOLUMEN (64 Hz)
     // ==========================================
@@ -304,6 +375,20 @@ void APU::step(int cycles) {
                 volume2 = currentVolume2 / 15.0f;
             } else {
                 envelopePeriod2 = 0; 
+            }
+        }
+    }
+
+    if (envelopePeriod4 > 0) {
+        envelopeTimer4 -= cycles;
+        if (envelopeTimer4 <= 0) {
+            envelopeTimer4 += envelopePeriod4 * 65536;
+            int newVol = currentVolume4 + envelopeDirection4;
+            if (newVol >= 0 && newVol <= 15) {
+                currentVolume4 = newVol;
+                volume4 = currentVolume4 / 15.0f;
+            } else {
+                envelopePeriod4 = 0; 
             }
         }
     }
@@ -366,6 +451,15 @@ void APU::step(int cycles) {
         }
     }
 
+    lengthCounterTick4 += cycles;
+    if (lengthCounterTick4 >= 16384) {
+        lengthCounterTick4 -= 16384;
+        if (lengthEnabled4 && lengthTimer4 > 0) {
+            lengthTimer4--;
+            if (lengthTimer4 == 0) channel4On = false; 
+        }
+    }
+
     // ==========================================
     // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
     // ==========================================
@@ -378,6 +472,7 @@ void APU::step(int cycles) {
         float sample1 = 0.0f;
         float sample2 = 0.0f;
         float sample3 = 0.0f;
+        float sample4 = 0.0f;
 
         // Muestra del Canal 1
         if (channel1On && volume1 > 0.0f) {
@@ -408,7 +503,12 @@ void APU::step(int cycles) {
             sample3 = (shiftedNibble/7.5f) - 1.0f;
         }
 
-        float finalSample = (sample1 + sample2 + sample3) * 0.1f;
+        if (channel4On && volume4 > 0.0f) {
+            // Si el bit 0 es 0, la señal es Alta. Si es 1, la señal es Baja.
+            sample4 = ((lfsr & 1) == 0 ? 1.0f : -1.0f) * volume4;
+        }
+
+        float finalSample = (sample1 + sample2 + sample3 + sample4) * 0.1f;
 
         // Audio Estéreo Básico (Izquierda y Derecha iguales por ahora)
         audioBuffer.push_back(finalSample);
