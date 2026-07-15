@@ -44,6 +44,29 @@ private:
     bool lengthEnabled1;
     int lengthCounterTick1;
 
+    // --- CANAL 2: Onda Cuadrada (Sin Barrido) ---
+    Byte NR21 = 0x00; // 0xFF16 - Duty Cycle y Longitud
+    Byte NR22 = 0x00; // 0xFF17 - Volumen y Envolvente
+    Byte NR23 = 0x00; // 0xFF18 - Frecuencia (8 bits bajos)
+    Byte NR24 = 0x00; // 0xFF19 - Frecuencia (3 bits altos) y Trigger
+
+    int timer2 = 0;         
+    int dutyPointer2 = 0;   
+    int frequency2 = 0;     
+    float volume2 = 0.0f;      
+    bool channel2On = false;    
+
+    // --- Variables de la Envolvente CH2 ---
+    int currentVolume2 = 0;
+    int envelopeTimer2 = 0;
+    int envelopePeriod2 = 0;
+    int envelopeDirection2 = 1;
+
+    // --- Variables de Longitud CH2 ---
+    int lengthTimer2 = 0;
+    bool lengthEnabled2 = false;
+    int lengthCounterTick2 = 0;
+
     // Variables de Control Maestro
     Byte NR50 = 0x00;
     Byte NR51 = 0x00;

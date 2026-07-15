@@ -70,6 +70,10 @@ Byte APU::read(Word address) const {
         case 0xFF12: return NR12;
         case 0xFF13: return 0xFF;        // NR13 es "Write-Only" (Solo escritura)
         case 0xFF14: return NR14 | 0xBF; // Solo el bit 6 (Length enable) se puede leer
+        case 0xFF16: return NR21 | 0x3F; // Solo los 2 bits de Duty son leíbles
+        case 0xFF17: return NR22;
+        case 0xFF18: return 0xFF;        // Frecuencia baja es Write-Only
+        case 0xFF19: return NR24 | 0xBF; // Solo el bit de Length es leíble
         case 0xFF24: return NR50; 
         case 0xFF25: return NR51;
         case 0xFF26: {
@@ -124,8 +128,8 @@ void APU::write(Word address, Byte value) {
                 
                 if (lengthTimer1 == 0) lengthTimer1 = 64;
 
-                int vol = (NR12 >> 4) & 0x0F;
-                volume1 = vol / 15.0f; // [0.0,1.0]
+                currentVolume1 = (NR12 >> 4) & 0x0F;
+                volume1 = currentVolume1/15.0f; // [0.0,1.0]
 
                 envelopeDirection1 = (NR12 & 0x08) != 0 ? 1 : -1; // Bit 3
                 envelopePeriod1 = NR12 & 0x07;                    // Bits 2-0
@@ -149,6 +153,46 @@ void APU::write(Word address, Byte value) {
                 timer1 = (2048 - frequency1) * 4;
             }
             break;
+        // --- CANAL 2 ---
+        case 0xFF16: 
+            NR21 = value; 
+            lengthTimer2 = 64 - (value & 0x3F);
+            break;
+        case 0xFF17: 
+            NR22 = value;
+            if ((NR22 & 0xF8) == 0) {
+                channel2On = false;
+            }
+            break;
+        case 0xFF18: 
+            NR23 = value; 
+            frequency2 = (frequency2 & 0x0700) | NR23;
+            break;
+        case 0xFF19: 
+            NR24 = value; 
+            frequency2 = (frequency2 & 0x00FF) | ((NR24 & 0x07) << 8);
+
+            lengthEnabled2 = (value & 0x40) != 0;
+            
+            // --- TRIGGER CANAL 2 (Bit 7) ---
+            if ((value & 0x80) != 0) {
+                channel2On = ((NR22 & 0xF8) != 0);
+                
+                if (lengthTimer2 == 0) lengthTimer2 = 64;
+
+                currentVolume2 = (NR22 >> 4) & 0x0F; 
+                volume2 = currentVolume2 / 15.0f;    
+
+                envelopeDirection2 = (NR22 & 0x08) != 0 ? 1 : -1;
+                envelopePeriod2 = NR22 & 0x07;
+
+                if (envelopePeriod2 != 0) {
+                    envelopeTimer2 = envelopePeriod2 * 65536;
+                }
+                
+                timer2 = (2048 - frequency2) * 4;
+            }
+            break;
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }
@@ -157,35 +201,61 @@ void APU::write(Word address, Byte value) {
 void APU::step(int cycles) {
     if (!soundEnabled) return;
 
-    // 1. Actualizar el temporizador de la onda cuadrada
+    // ==========================================
+    // 1. ACTUALIZACIÓN DE TEMPORIZADORES (FRECUENCIA)
+    // ==========================================
+    
+    // Canal 1
     timer1 -= cycles;
     if (timer1 <= 0) {
         timer1 += (2048 - frequency1) * 4;
         dutyPointer1 = (dutyPointer1 + 1) % 8;
     }
 
-    // 1.5. Actualizar la Envolvente de Volumen
+    // Canal 2
+    timer2 -= cycles;
+    if (timer2 <= 0) {
+        timer2 += (2048 - frequency2) * 4;
+        dutyPointer2 = (dutyPointer2 + 1) % 8;
+    }
+
+    // ==========================================
+    // 2. ACTUALIZACIÓN DE ENVOLVENTES DE VOLUMEN (64 Hz)
+    // ==========================================
+
+    // Canal 1
     if (envelopePeriod1 > 0) {
         envelopeTimer1 -= cycles;
         if (envelopeTimer1 <= 0) {
-            // Recargar el temporizador
             envelopeTimer1 += envelopePeriod1 * 65536;
-            
-            // Subir o bajar el volumen
             int newVol = currentVolume1 + envelopeDirection1;
-            
-            // Asegurarnos de que no pase de 15 ni baje de 0
             if (newVol >= 0 && newVol <= 15) {
                 currentVolume1 = newVol;
                 volume1 = currentVolume1 / 15.0f;
             } else {
-                // Si llegamos al límite (0 o 15), la envolvente se apaga
                 envelopePeriod1 = 0; 
             }
         }
     }
 
-    // 1.7. Actualizar el Sweep (Barrido)
+    // Canal 2
+    if (envelopePeriod2 > 0) {
+        envelopeTimer2 -= cycles;
+        if (envelopeTimer2 <= 0) {
+            envelopeTimer2 += envelopePeriod2 * 65536;
+            int newVol = currentVolume2 + envelopeDirection2;
+            if (newVol >= 0 && newVol <= 15) {
+                currentVolume2 = newVol;
+                volume2 = currentVolume2 / 15.0f;
+            } else {
+                envelopePeriod2 = 0; 
+            }
+        }
+    }
+
+    // ==========================================
+    // 3. ACTUALIZACIÓN DE SWEEP (SOLO CANAL 1)
+    // ==========================================
     if (sweepTimer1 > 0) {
         sweepTimer1 -= cycles;
         if (sweepTimer1 <= 0) {
@@ -199,7 +269,6 @@ void APU::step(int cycles) {
                     channel1On = false;
                 } 
                 else if (sweepPeriod1 > 0) {
-                    // Solo aplicamos la nueva frecuencia si el periodo era mayor a 0
                     shadowFrequency1 = newFreq;
                     frequency1 = newFreq;
                     NR13 = frequency1 & 0xFF;
@@ -209,51 +278,70 @@ void APU::step(int cycles) {
         }
     }
 
-    // 1.8. Actualizar el Length Timer (a 256 Hz)
+    // ==========================================
+    // 4. ACTUALIZACIÓN DE LENGTH TIMERS (256 Hz)
+    // ==========================================
+
+    // Canal 1
     lengthCounterTick1 += cycles;
     if (lengthCounterTick1 >= 16384) {
         lengthCounterTick1 -= 16384;
-        
         if (lengthEnabled1 && lengthTimer1 > 0) {
             lengthTimer1--;
-            if (lengthTimer1 == 0) {
-                channel1On = false; 
-            }
+            if (lengthTimer1 == 0) channel1On = false; 
         }
     }
 
-    // 2. Generar muestras a 44.1 kHz
+    // Canal 2
+    lengthCounterTick2 += cycles;
+    if (lengthCounterTick2 >= 16384) {
+        lengthCounterTick2 -= 16384;
+        if (lengthEnabled2 && lengthTimer2 > 0) {
+            lengthTimer2--;
+            if (lengthTimer2 == 0) channel2On = false; 
+        }
+    }
+
+    // ==========================================
+    // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
+    // ==========================================
     sampleCounter += cycles;
     const int CYCLES_PER_SAMPLE = 4194304 / 44100;
 
     while (sampleCounter >= CYCLES_PER_SAMPLE) {
         sampleCounter -= CYCLES_PER_SAMPLE;
 
-        float sample = 0.0f;
+        float sample1 = 0.0f;
+        float sample2 = 0.0f;
 
-        // Si el canal está encendido y tiene volumen, calculamos su amplitud
+        // Muestra del Canal 1
         if (channel1On && volume1 > 0.0f) {
-            // Leer los 2 bits más altos de NR11 para saber qué Duty Cycle usar (0, 1, 2 o 3)
-            int dutyIndex = (NR11 >> 6) & 0x03;
-            
-            // Obtener el valor de la onda (-1.0 o 1.0) y multiplicarlo por el volumen
-            sample = dutyCycles[dutyIndex][dutyPointer1] * volume1;
-            sample *= 0.1f;
+            int dutyIndex1 = (NR11 >> 6) & 0x03;
+            sample1 = dutyCycles[dutyIndex1][dutyPointer1] * volume1;
         }
 
-        // Insertar canal Izquierdo y Derecho (Estéreo)
-        audioBuffer.push_back(sample);
-        audioBuffer.push_back(sample);
+        // Muestra del Canal 2
+        if (channel2On && volume2 > 0.0f) {
+            int dutyIndex2 = (NR21 >> 6) & 0x03;
+            sample2 = dutyCycles[dutyIndex2][dutyPointer2] * volume2;
+        }
+
+        // Mezclamos los canales sumándolos y aplicamos un factor para no saturar el audio
+        float finalSample = (sample1 + sample2) * 0.1f;
+
+        // Audio Estéreo Básico (Izquierda y Derecha iguales por ahora)
+        audioBuffer.push_back(finalSample);
+        audioBuffer.push_back(finalSample);
     }
 
-    // 3. Enviar a SDL2 cuando tengamos 1024 muestras estéreo (2048 flotantes)
-    if (audioBuffer.size() >= 2048) {
-        const Uint32 MAX_AUDIO_QUEUE_BYTES = 35280;
-
+    // ==========================================
+    // 6. ENVÍO A SDL2
+    // ==========================================
+    if (audioBuffer.size() >= 1024) {
+        const Uint32 MAX_AUDIO_QUEUE_BYTES = 16384;
         if (SDL_GetQueuedAudioSize(audioDevice) < MAX_AUDIO_QUEUE_BYTES) {
             SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
         }
-
         audioBuffer.clear();
     }
 }
