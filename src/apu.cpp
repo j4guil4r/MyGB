@@ -508,11 +508,37 @@ void APU::step(int cycles) {
             sample4 = ((lfsr & 1) == 0 ? 1.0f : -1.0f) * volume4;
         }
 
-        float finalSample = (sample1 + sample2 + sample3 + sample4) * 0.1f;
+        // ==========================================
+        // 5.1 DISTRIBUCIÓN ESTÉREO (PANNING - NR51)
+        // ==========================================
+        float leftMix = 0.0f;
+        float rightMix = 0.0f;
 
-        // Audio Estéreo Básico (Izquierda y Derecha iguales por ahora)
-        audioBuffer.push_back(finalSample);
-        audioBuffer.push_back(finalSample);
+        // Canal 1
+        if (NR51 & 0x10) leftMix += sample1; 
+        if (NR51 & 0x01) rightMix += sample1; 
+        // Canal 2
+        if (NR51 & 0x20) leftMix += sample2;  
+        if (NR51 & 0x02) rightMix += sample2; 
+        // Canal 3
+        if (NR51 & 0x40) leftMix += sample3;  
+        if (NR51 & 0x04) rightMix += sample3; 
+        // Canal 4
+        if (NR51 & 0x80) leftMix += sample4;  
+        if (NR51 & 0x08) rightMix += sample4; 
+
+        // ==========================================
+        // 5.2 VOLUMEN MAESTRO (FADE-OUT - NR50)
+        // ==========================================
+        
+        float masterLeftVol = ((NR50 >> 4) & 0x07) / 7.0f;  
+        float masterRightVol = (NR50 & 0x07) / 7.0f;
+
+        float finalLeft = leftMix * masterLeftVol * 0.1f;
+        float finalRight = rightMix * masterRightVol * 0.1f;
+
+        audioBuffer.push_back(finalLeft);
+        audioBuffer.push_back(finalRight);
     }
 
     // ==========================================
