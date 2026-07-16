@@ -122,6 +122,10 @@ private:
         {-1,  1,  1,  1,  1,  1,  1, -1}  // 75%
     };
 
+    // helpers
+    void tickEnvelope(int cycles, int& period, int& timer, int& currentVol, float& volFloat, int direction);
+    void tickLength(int cycles, int& counterTick, bool enabled, int& timer, bool& channelOn);
+
 public:
     APU();
     ~APU();

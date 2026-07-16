@@ -63,6 +63,34 @@ APU::~APU() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
+void APU::tickEnvelope(int cycles, int& period, int& timer, int& currentVol, float& volFloat, int direction) {
+    if (period > 0) {
+        timer -= cycles;
+        if (timer <= 0) {
+            timer += period * 65536;
+            int newVol = currentVol + direction;
+            if (newVol >= 0 && newVol <= 15) {
+                currentVol = newVol;
+                volFloat = currentVol / 15.0f;
+            }
+            else {
+                period = 0; 
+            }
+        }
+    }
+}
+
+void APU::tickLength(int cycles, int& counterTick, bool enabled, int& timer, bool& channelOn) {
+    counterTick += cycles;
+    if (counterTick >= 16384) {
+        counterTick -= 16384;
+        if (enabled && timer > 0) {
+            timer--;
+            if (timer == 0) channelOn = false; 
+        }
+    }
+}
+
 Byte APU::read(Word address) const {
     switch (address) {
         case 0xFF10: return NR10 | 0x80; 
@@ -349,49 +377,9 @@ void APU::step(int cycles) {
     // 2. ACTUALIZACIÓN DE ENVOLVENTES DE VOLUMEN (64 Hz)
     // ==========================================
 
-    // Canal 1
-    if (envelopePeriod1 > 0) {
-        envelopeTimer1 -= cycles;
-        if (envelopeTimer1 <= 0) {
-            envelopeTimer1 += envelopePeriod1 * 65536;
-            int newVol = currentVolume1 + envelopeDirection1;
-            if (newVol >= 0 && newVol <= 15) {
-                currentVolume1 = newVol;
-                volume1 = currentVolume1 / 15.0f;
-            } else {
-                envelopePeriod1 = 0; 
-            }
-        }
-    }
-
-    // Canal 2
-    if (envelopePeriod2 > 0) {
-        envelopeTimer2 -= cycles;
-        if (envelopeTimer2 <= 0) {
-            envelopeTimer2 += envelopePeriod2 * 65536;
-            int newVol = currentVolume2 + envelopeDirection2;
-            if (newVol >= 0 && newVol <= 15) {
-                currentVolume2 = newVol;
-                volume2 = currentVolume2 / 15.0f;
-            } else {
-                envelopePeriod2 = 0; 
-            }
-        }
-    }
-
-    if (envelopePeriod4 > 0) {
-        envelopeTimer4 -= cycles;
-        if (envelopeTimer4 <= 0) {
-            envelopeTimer4 += envelopePeriod4 * 65536;
-            int newVol = currentVolume4 + envelopeDirection4;
-            if (newVol >= 0 && newVol <= 15) {
-                currentVolume4 = newVol;
-                volume4 = currentVolume4 / 15.0f;
-            } else {
-                envelopePeriod4 = 0; 
-            }
-        }
-    }
+    tickEnvelope(cycles, envelopePeriod1, envelopeTimer1, currentVolume1, volume1, envelopeDirection1);
+    tickEnvelope(cycles, envelopePeriod2, envelopeTimer2, currentVolume2, volume2, envelopeDirection2);
+    tickEnvelope(cycles, envelopePeriod4, envelopeTimer4, currentVolume4, volume4, envelopeDirection4);
 
     // ==========================================
     // 3. ACTUALIZACIÓN DE SWEEP (SOLO CANAL 1)
@@ -422,43 +410,10 @@ void APU::step(int cycles) {
     // 4. ACTUALIZACIÓN DE LENGTH TIMERS (256 Hz)
     // ==========================================
 
-    // Canal 1
-    lengthCounterTick1 += cycles;
-    if (lengthCounterTick1 >= 16384) {
-        lengthCounterTick1 -= 16384;
-        if (lengthEnabled1 && lengthTimer1 > 0) {
-            lengthTimer1--;
-            if (lengthTimer1 == 0) channel1On = false; 
-        }
-    }
-
-    // Canal 2
-    lengthCounterTick2 += cycles;
-    if (lengthCounterTick2 >= 16384) {
-        lengthCounterTick2 -= 16384;
-        if (lengthEnabled2 && lengthTimer2 > 0) {
-            lengthTimer2--;
-            if (lengthTimer2 == 0) channel2On = false; 
-        }
-    }
-
-    lengthCounterTick3 += cycles;
-    if (lengthCounterTick3 >= 16384) {
-        lengthCounterTick3 -= 16384;
-        if (lengthEnabled3 && lengthTimer3 > 0) {
-            lengthTimer3--;
-            if (lengthTimer3 == 0) channel3On = false; 
-        }
-    }
-
-    lengthCounterTick4 += cycles;
-    if (lengthCounterTick4 >= 16384) {
-        lengthCounterTick4 -= 16384;
-        if (lengthEnabled4 && lengthTimer4 > 0) {
-            lengthTimer4--;
-            if (lengthTimer4 == 0) channel4On = false; 
-        }
-    }
+    tickLength(cycles, lengthCounterTick1, lengthEnabled1, lengthTimer1, channel1On);
+    tickLength(cycles, lengthCounterTick2, lengthEnabled2, lengthTimer2, channel2On);
+    tickLength(cycles, lengthCounterTick3, lengthEnabled3, lengthTimer3, channel3On);
+    tickLength(cycles, lengthCounterTick4, lengthEnabled4, lengthTimer4, channel4On);
 
     // ==========================================
     // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
