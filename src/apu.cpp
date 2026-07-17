@@ -63,35 +63,33 @@ APU::~APU() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void APU::tickEnvelope(int cycles, int& period, int& timer, int& currentVol, float& volFloat, int direction) {
+void APU::tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction) {
     if (period > 0) {
-        timer -= cycles;
+        timer--;
         if (timer <= 0) {
-            timer += period * 65536;
+            timer = period; // Recargamos el timer con el periodo real
             int newVol = currentVol + direction;
             if (newVol >= 0 && newVol <= 15) {
                 currentVol = newVol;
                 volFloat = currentVol / 15.0f;
-            }
-            else {
-                period = 0; 
+            } else {
+                period = 0; // Apagamos la envolvente
             }
         }
     }
 }
 
-void APU::tickLength(int cycles, int& counterTick, bool enabled, int& timer, bool& channelOn) {
-    counterTick += cycles;
-    if (counterTick >= 16384) {
-        counterTick -= 16384;
-        if (enabled && timer > 0) {
-            timer--;
-            if (timer == 0) channelOn = false; 
-        }
+void APU::tickLength(bool enabled, int& timer, bool& channelOn) {
+    if (enabled && timer > 0) {
+        timer--;
+        if (timer == 0) channelOn = false; 
     }
 }
 
 Byte APU::read(Word address) const {
+    if (address >= 0xFF30 && address <= 0xFF3F) {
+        return waveRam[address - 0xFF30];
+    }
     switch (address) {
         case 0xFF10: return NR10 | 0x80; 
         case 0xFF11: return NR11 | 0x3F; // Solo los 2 bits más altos (Duty) se pueden leer
@@ -135,6 +133,12 @@ void APU::write(Word address, Byte value) {
             channel2On = false;
             channel3On = false;
             channel4On = false;
+
+            NR10 = 0; NR11 = 0; NR12 = 0; NR13 = 0; NR14 = 0;
+            NR21 = 0; NR22 = 0; NR23 = 0; NR24 = 0;
+            NR30 = 0; NR31 = 0; NR32 = 0; NR33 = 0; NR34 = 0;
+            NR41 = 0; NR42 = 0; NR43 = 0; NR44 = 0;
+            NR50 = 0; NR51 = 0;
         }
         return;
     }
@@ -182,9 +186,10 @@ void APU::write(Word address, Byte value) {
                 envelopeDirection1 = (NR12 & 0x08) != 0 ? 1 : -1; // Bit 3
                 envelopePeriod1 = NR12 & 0x07;                    // Bits 2-0
 
-                if (envelopePeriod1 != 0) {
+                /*if (envelopePeriod1 != 0) {
                     envelopeTimer1 = envelopePeriod1 * 65536;
-                }
+                }*/
+               envelopeTimer1 = envelopePeriod1;
 
                 // 3. Configurar el Barrido (Sweep) leyendo NR10
                 shadowFrequency1 = frequency1;
@@ -234,9 +239,10 @@ void APU::write(Word address, Byte value) {
                 envelopeDirection2 = (NR22 & 0x08) != 0 ? 1 : -1;
                 envelopePeriod2 = NR22 & 0x07;
 
-                if (envelopePeriod2 != 0) {
+                /*if (envelopePeriod2 != 0) {
                     envelopeTimer2 = envelopePeriod2 * 65536;
-                }
+                }*/
+               envelopeTimer2 = envelopePeriod2;
                 
                 timer2 = (2048 - frequency2) * 4;
             }
@@ -304,9 +310,10 @@ void APU::write(Word address, Byte value) {
                 envelopeDirection4 = (NR42 & 0x08) != 0 ? 1 : -1;
                 envelopePeriod4 = NR42 & 0x07;
 
-                if (envelopePeriod4 != 0) {
+                /*if (envelopePeriod4 != 0) {
                     envelopeTimer4 = envelopePeriod4 * 65536;
-                }
+                }*/
+               envelopeTimer4 = envelopePeriod4;
                 
                 // Al disparar el canal, el LFSR se reinicia a 15 bits en 1
                 lfsr = 0x7FFF; 
@@ -374,12 +381,44 @@ void APU::step(int cycles) {
     }
 
     // ==========================================
-    // 2. ACTUALIZACIÓN DE ENVOLVENTES DE VOLUMEN (64 Hz)
+    // FRAME SEQUENCER (512 Hz)
     // ==========================================
+    frameSequencerTimer -= cycles;
+    if (frameSequencerTimer <= 0) {
+        frameSequencerTimer += 8192; // Reiniciamos el reloj
 
-    tickEnvelope(cycles, envelopePeriod1, envelopeTimer1, currentVolume1, volume1, envelopeDirection1);
-    tickEnvelope(cycles, envelopePeriod2, envelopeTimer2, currentVolume2, volume2, envelopeDirection2);
-    tickEnvelope(cycles, envelopePeriod4, envelopeTimer4, currentVolume4, volume4, envelopeDirection4);
+        switch (frameSequencerStep) {
+            case 0:
+            case 4:
+                // 256 Hz: Reloj de Longitud
+                tickLength(lengthEnabled1, lengthTimer1, channel1On);
+                tickLength(lengthEnabled2, lengthTimer2, channel2On);
+                tickLength(lengthEnabled3, lengthTimer3, channel3On);
+                tickLength(lengthEnabled4, lengthTimer4, channel4On);
+                break;
+            case 2:
+            case 6:
+                // 256 Hz: Reloj de Longitud
+                tickLength(lengthEnabled1, lengthTimer1, channel1On);
+                tickLength(lengthEnabled2, lengthTimer2, channel2On);
+                tickLength(lengthEnabled3, lengthTimer3, channel3On);
+                tickLength(lengthEnabled4, lengthTimer4, channel4On);
+                
+                // 128 Hz: Reloj de Barrido (Sweep)
+                // (Aquí irá la lógica del Sweep más adelante)
+                break;
+            case 7:
+                // 64 Hz: Reloj de Envolventes de Volumen
+                tickEnvelope(envelopePeriod1, envelopeTimer1, currentVolume1, volume1, envelopeDirection1);
+                tickEnvelope(envelopePeriod2, envelopeTimer2, currentVolume2, volume2, envelopeDirection2);
+                tickEnvelope(envelopePeriod4, envelopeTimer4, currentVolume4, volume4, envelopeDirection4);
+                break;
+            // Los pasos 1, 3 y 5 no hacen "tic" en ningún componente
+        }
+        
+        // Avanzamos al siguiente paso (0 a 7)
+        frameSequencerStep = (frameSequencerStep + 1) % 8;
+    }
 
     // ==========================================
     // 3. ACTUALIZACIÓN DE SWEEP (SOLO CANAL 1)
@@ -405,15 +444,7 @@ void APU::step(int cycles) {
             }
         }
     }
-
-    // ==========================================
-    // 4. ACTUALIZACIÓN DE LENGTH TIMERS (256 Hz)
-    // ==========================================
-
-    tickLength(cycles, lengthCounterTick1, lengthEnabled1, lengthTimer1, channel1On);
-    tickLength(cycles, lengthCounterTick2, lengthEnabled2, lengthTimer2, channel2On);
-    tickLength(cycles, lengthCounterTick3, lengthEnabled3, lengthTimer3, channel3On);
-    tickLength(cycles, lengthCounterTick4, lengthEnabled4, lengthTimer4, channel4On);
+    
 
     // ==========================================
     // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)

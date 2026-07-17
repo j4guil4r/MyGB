@@ -57,6 +57,8 @@ public:
         else   F &= ~f;
     }
     void handleInterrupts();
+    // GETTERS
+    Word getPC(){return PC;}
 private:
     Bus& bus;
 

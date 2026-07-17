@@ -123,8 +123,12 @@ private:
     };
 
     // helpers
-    void tickEnvelope(int cycles, int& period, int& timer, int& currentVol, float& volFloat, int direction);
-    void tickLength(int cycles, int& counterTick, bool enabled, int& timer, bool& channelOn);
+    void tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction);
+    void tickLength(bool enabled, int& timer, bool& channelOn);
+
+    // --- FRAME SEQUENCER ---
+    int frameSequencerTimer = 8192;
+    int frameSequencerStep = 0;
 
 public:
     APU();

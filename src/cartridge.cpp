@@ -97,10 +97,10 @@ void Cartridge::parseHeader() {
         mbc = nullptr;
     }
 
-    std::cout << "--- CARTUCHO CARGADO ---\n";
+    /*std::cout << "--- CARTUCHO CARGADO ---\n";
     std::cout << "Titulo: " << title << "\n";
     std::cout << "Tipo (Hex): 0x" << std::hex << (int)cartridgeType << std::dec << "\n";
-    std::cout << "------------------------\n";
+    std::cout << "------------------------\n";*/
 }
 
 Byte Cartridge::read(Word address) const {
