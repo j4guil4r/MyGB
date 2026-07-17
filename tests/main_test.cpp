@@ -8,27 +8,19 @@
 namespace fs = std::filesystem;
 
 int main () {
-    std::string romsDirectory = "roms/";
+    std::string blarggDirectory = "roms/Blargg/";
 
     std::vector<std::string> filenames;
 
-    for (const auto& entry: fs::directory_iterator(romsDirectory)) {
-        if(entry.path().extension() == ".gb" 
-        && (entry.path().filename() != "Tetris.gb" 
-        && entry.path().filename() != "SuperMarioLand.gb"
-        && entry.path().filename() != "PokemonRedVersion.gb"
-        )
-    ) {
-            std::string romName = entry.path().filename().string();
-            filenames.emplace_back(romName);
-        }
+    for (const auto& entry: fs::directory_iterator(blarggDirectory)) {
+        std::string romName = entry.path().filename().string();
+        filenames.emplace_back(romName);
     }
 
 
     for (const std::string& rom: filenames) {
-
         Bus gbBus;
-        if (!gbBus.cartridge.loadROM(romsDirectory + rom)) {
+        if (!gbBus.cartridge.loadROM(blarggDirectory + rom)) {
             std::cout << "No se encontró " << rom;
             continue;
         }
@@ -43,7 +35,6 @@ int main () {
         std::cout << "==== TEST " << rom << " ====\n";
 
         try {
-            // Loop de ejecución
             while (!testFinished && cpu.getCycles() < maxCycles) {
                 long long cyclesBefore = cpu.getCycles();
                 
@@ -56,7 +47,6 @@ int main () {
                 gbBus.ppu.step(deltaCycles);
                 cpu.handleInterrupts();
 
-                // Revisar la salida serial para detener el bucle
                 std::string output = gbBus.getSerialOutput();
                 if (output.find("Passed") != std::string::npos) {
                     std::cout << "\n[RESULTADO]: ✅ PASSED\n";
@@ -71,7 +61,6 @@ int main () {
                 }
             }
 
-            // Si el while terminó porque superó el límite de maxCycles:
             if (!testFinished) {
                 std::cout << "\n[RESULTADO]: ⏱️ TIMEOUT (Posible bucle infinito o test muy largo)\n";
             }

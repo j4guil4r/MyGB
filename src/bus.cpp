@@ -60,6 +60,12 @@ Byte Bus::read(Word addr) const {
             }
             return result;
         }
+
+        // --- APU ---
+        if (addr >= 0XFF10 && addr <= 0xFF3F) {
+            return apu.read(addr);
+        }
+
         // --- Registros de la PPU (FF40 - FF4B) ---
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             return ppu.read(addr);
@@ -134,6 +140,12 @@ void Bus::write(Word addr, Byte data) {
                 // y lo metemos directo en la OAM de la PPU
                 ppu.write(0xFE00 + i, this->read(sourceAddress + i));
             }
+            return;
+        }
+
+        // --- APU ---
+        if (addr >= 0xFF10 && addr <= 0xFF3F) {
+            apu.write(addr, data);
             return;
         }
 
@@ -218,7 +230,6 @@ void Bus::updateTimers(const long long cycles) {
 
             // Incrementamos TIMA
             if (tima == 0xFF) {
-                // ¡OVERFLOW!
                 tima = tma; // Recargamos con el valor de TMA
                 requestInterrupt(2); // Pedimos Interrupción de Timer (Bit 2)
             } else {
@@ -226,22 +237,6 @@ void Bus::updateTimers(const long long cycles) {
             }
         }
     }
-
-    /*
-    // --- SIMULACIÓN PPU (Simple) ---
-    ppuCounter += cycles;
-    // Una línea tarda 456 ciclos de CPU
-    if (ppuCounter >= 456) {
-        ppuCounter -= 456;
-        ly++;
-
-        // Si llegamos a la línea 144, entramos en VBlank -> INT 0
-        if (ly == 144) requestInterrupt(0);
-
-        // Si pasamos de la línea 153, volvemos a empezar (Frame nuevo)
-        else if (ly > 153) ly = 0;
-    }
-    */
 }
 
 std::string Bus::getSerialOutput () const {

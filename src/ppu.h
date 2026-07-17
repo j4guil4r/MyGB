@@ -52,6 +52,8 @@ public:
     Byte read(Word address) const;
     void write(Word address, Byte value);
 
+    void updateStatInterrupt();
+
 private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
     void drawScanline();

@@ -64,6 +64,7 @@ private:
     // Nota: El procesador es Multi-cycle.
     long long cycles = 0;
     bool ime = false; // Interrupt Master Enable
+    int imeDelay = 0;
     bool isHalted = false;
     bool isStopped = false;
 
