@@ -71,6 +71,11 @@ APU::~APU() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
+void APU::resetSequencerPhase() {
+    frameSequencerTimer = 8192;
+    //frameSequencerStep = 0;
+}
+
 void APU::tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction) {
     if (period > 0) {
         timer--;
@@ -150,6 +155,11 @@ void APU::write(Word address, Byte value) {
     // NR52 (0xFF26) - Control Maestro
     if (address == 0xFF26) {
         bool turningOn = (value & 0x80) != 0;
+
+        if (!soundEnabled && turningOn) {
+            frameSequencerStep = 0;
+        }
+
         if (soundEnabled && !turningOn) {
 
             NR10 = 0; NR11 = 0; NR12 = 0; NR13 = 0; NR14 = 0;
@@ -190,18 +200,37 @@ void APU::write(Word address, Byte value) {
             // Combinar 8 bits bajos
             frequency1 = (frequency1 & 0x0700) | NR13;
             break;
-        case 0xFF14: 
-            NR14 = value; 
-            // Combinar 3 bits altos (enmascarados con 0x07)
-            frequency1 = (frequency1 & 0x00FF) | ((NR14 & 0x07) << 8);
+        case 0xFF14:{
+            bool wasEnabled = (NR14 & 0x40) != 0;
+            bool isEnabled = (value & 0x40) != 0;
+            bool trigger = (value & 0x80) != 0;
 
-            lengthEnabled1 = (value & 0x40) != 0;
+            NR14 = value; 
+            frequency1 = (frequency1 & 0x00FF) | ((NR14 & 0x07) << 8);
+            lengthEnabled1 = isEnabled;
+
+            bool isFirstHalf = (frameSequencerStep % 2 == 0);
+
+            if (!wasEnabled && isEnabled && !isFirstHalf) {
+                if (lengthTimer1 > 0) {
+                    lengthTimer1--;
+                    if (lengthTimer1 == 0 && !trigger) {
+                        channel1On = false;
+                    }
+                }
+            }
+            
             
             // --- TRIGGER (Bit 7) ---
-            if ((value & 0x80) != 0) {
+            if (trigger) {
                 channel1On = ((NR12 & 0xF8) != 0);
 
-                if (lengthTimer1 == 0) lengthTimer1 = 64;
+                if (lengthTimer1 == 0) {
+                    lengthTimer1 = 64;
+                    if (isEnabled && !isFirstHalf) {
+                        lengthTimer1 = 63;
+                    }
+                }
 
                 currentVolume1 = (NR12 >> 4) & 0x0F;
                 volume1 = currentVolume1/15.0f; // [0.0,1.0]
@@ -229,6 +258,7 @@ void APU::write(Word address, Byte value) {
                 timer1 = (2048 - frequency1) * 4;
             }
             break;
+        }
         // --- CANAL 2 ---
         case 0xFF16: 
             NR21 = value; 
@@ -244,17 +274,37 @@ void APU::write(Word address, Byte value) {
             NR23 = value; 
             frequency2 = (frequency2 & 0x0700) | NR23;
             break;
-        case 0xFF19: 
+        case 0xFF19:{
+            bool wasEnabled = (NR24 & 0x40) != 0;
+            bool isEnabled = (value & 0x40) != 0;
+            bool trigger = (value & 0x80) != 0;
+
             NR24 = value; 
             frequency2 = (frequency2 & 0x00FF) | ((NR24 & 0x07) << 8);
-
             lengthEnabled2 = (value & 0x40) != 0;
+
+            bool isFirstHalf = (frameSequencerStep % 2 == 0);
+
+            if (!wasEnabled && isEnabled && !isFirstHalf) {
+                if (lengthTimer2 > 0) {
+                    lengthTimer2--;
+                    if (lengthTimer2 == 0 && !trigger) {
+                        channel2On = false;
+                    }
+                }
+            }
+            
             
             // --- TRIGGER CANAL 2 (Bit 7) ---
-            if ((value & 0x80) != 0) {
+            if (trigger) {
                 channel2On = ((NR22 & 0xF8) != 0);
 
-                if (lengthTimer2 == 0) lengthTimer2 = 64;
+                if (lengthTimer2 == 0) {
+                    lengthTimer2 = 64;
+                    if (isEnabled && !isFirstHalf) {
+                        lengthTimer2 = 63;
+                    }
+                }
 
                 currentVolume2 = (NR22 >> 4) & 0x0F; 
                 volume2 = currentVolume2 / 15.0f;    
@@ -270,7 +320,7 @@ void APU::write(Word address, Byte value) {
                 timer2 = (2048 - frequency2) * 4;
             }
             break;
-
+        }
         case 0xFF1A: 
             NR30 = value; 
             // Si apagan el DAC del Canal 3, se silencia de inmediato
@@ -287,17 +337,40 @@ void APU::write(Word address, Byte value) {
             NR33 = value; 
             frequency3 = (frequency3 & 0x0700) | NR33;
             break;
-        case 0xFF1E: 
+        case 0xFF1E:{
+            bool wasEnabled = (NR34 & 0x40) != 0;
+            bool isEnabled = (value & 0x40) != 0;
+            bool trigger = (value & 0x80) != 0;
+
             NR34 = value; 
             frequency3 = (frequency3 & 0x00FF) | ((NR34 & 0x07) << 8);
             lengthEnabled3 = (value & 0x40) != 0;
 
+            bool isFirstHalf = (frameSequencerStep % 2 == 0);
+
+            // 1. Reloj Extra SÓLO por encender la longitud en la primera mitad
+            if (!wasEnabled && isEnabled && !isFirstHalf) {
+                if (lengthTimer3 > 0) {
+                    lengthTimer3--;
+                    if (lengthTimer3 == 0 && !trigger) {
+                        channel3On = false;
+                    }
+                }
+            }
+
             // --- TRIGGER CANAL 3 (Bit 7) ---
-            if ((value & 0x80) != 0) {
+            if (trigger) {
                 // Validación del DAC del Canal 3
                 channel3On = ((NR30 & 0x80) != 0);
 
-                if (lengthTimer3 == 0) lengthTimer3 = 256;
+                if (lengthTimer3 == 0) {
+                    lengthTimer3 = 256;
+                    // 2. EL SÚPER QUIRK CORREGIDO:
+                    // Baja a 63 SOLO si está habilitado Y en la primera mitad
+                    if (isEnabled && !isFirstHalf) {
+                        lengthTimer3 = 255;
+                    }
+                }
                 
                 // Reiniciamos el puntero de la muestra
                 wavePointer = 0; 
@@ -305,6 +378,7 @@ void APU::write(Word address, Byte value) {
                 timer3 = (2048 - frequency3) * 2; 
             }
             break;
+        }
         // --- ESCRITURA CH4 ---
         case 0xFF20: 
             NR41 = value; 
@@ -317,15 +391,39 @@ void APU::write(Word address, Byte value) {
         case 0xFF22: 
             NR43 = value; 
             break;
-        case 0xFF23: 
+        case 0xFF23: {
+            bool wasEnabled = (NR44 & 0x40) != 0;
+            bool isEnabled = (value & 0x40) != 0;
+            bool trigger = (value & 0x80) != 0;
+
             NR44 = value; 
             lengthEnabled4 = (value & 0x40) != 0;
+
+            bool isFirstHalf = (frameSequencerStep % 2 == 0);
+
+            // 1. Reloj Extra SÓLO por encender la longitud en la primera mitad
+            if (!wasEnabled && isEnabled && !isFirstHalf) {
+                if (lengthTimer4 > 0) {
+                    lengthTimer4--;
+                    if (lengthTimer4 == 0 && !trigger) {
+                        channel4On = false;
+                    }
+                }
+            }
+            
             
             // --- TRIGGER CANAL 4 (Bit 7) ---
-            if ((value & 0x80) != 0) {
+            if (trigger) {
                 channel4On = ((NR42 & 0xF8) != 0);
 
-                if (lengthTimer4 == 0) lengthTimer4 = 64;
+                if (lengthTimer4 == 0) {
+                    lengthTimer4 = 64;
+                    // 2. EL SÚPER QUIRK CORREGIDO:
+                    // Baja a 63 SOLO si está habilitado Y en la primera mitad
+                    if (isEnabled && !isFirstHalf) {
+                        lengthTimer4 = 63;
+                    }
+                }
 
                 currentVolume4 = (NR42 >> 4) & 0x0F;
                 volume4 = currentVolume4 / 15.0f;
@@ -348,6 +446,7 @@ void APU::write(Word address, Byte value) {
                 timer4 = divisor << shift;
             }
             break;
+        }
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }

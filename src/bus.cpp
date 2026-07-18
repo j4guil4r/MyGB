@@ -191,7 +191,10 @@ void Bus::write(Word addr, Byte data) {
         //}
 
         // Timers
-        else if (addr == 0xFF04) { div = 0; divCounter = 0; }
+        else if (addr == 0xFF04) { 
+            div = 0; divCounter = 0;
+            apu.resetSequencerPhase();
+        }
         else if (addr == 0xFF05) tima = data;
         else if (addr == 0xFF06) tma = data;
         else if (addr == 0xFF07) tac = data;

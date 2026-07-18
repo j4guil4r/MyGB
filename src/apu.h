@@ -136,6 +136,7 @@ public:
 
     Byte read(Word address) const;
     void write(Word address, Byte value);
+    void resetSequencerPhase();
 
     void step(int cycles);
 };
