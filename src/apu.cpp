@@ -181,9 +181,9 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF12: 
             NR12 = value;
-            /*if ((NR12 & 0xF8) == 0) {
-                if (channel1On) channel1On = false;
-            }*/
+            if ((NR12 & 0xF8) == 0) {
+                channel1On = false;
+            }
             break;
         case 0xFF13: 
             NR13 = value; 
@@ -236,9 +236,9 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF17: 
             NR22 = value;
-            /*if ((NR22 & 0xF8) == 0) {
+            if ((NR22 & 0xF8) == 0) {
                 channel2On = false;
-            }*/
+            }
             break;
         case 0xFF18: 
             NR23 = value; 
@@ -312,7 +312,7 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF21: 
             NR42 = value;
-            //if ((NR42 & 0xF8) == 0) channel4On = false;
+            if ((NR42 & 0xF8) == 0) channel4On = false;
             break;
         case 0xFF22: 
             NR43 = value; 

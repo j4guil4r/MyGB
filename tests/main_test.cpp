@@ -124,7 +124,7 @@ int main () {
         if (entry.is_regular_file() && entry.path().extension() == ".gb") {
             //std::string parentDir = entry.path().parent_path().filename().string();
             //if (parentDir == "individual" || parentDir == "rom_singles") {
-                //if(entry.path().filename() == "02-len ctr.gb") 
+                if(entry.path().filename() == "02-len ctr.gb") 
                     testFiles.push_back(entry.path().string());
             //}
         }
