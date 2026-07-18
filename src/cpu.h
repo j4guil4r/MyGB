@@ -31,6 +31,10 @@ public:
     [[nodiscard]] Word getBC() const {return (B << 8) | C;}
     [[nodiscard]] Word getDE() const {return (D << 8) | E;}
     [[nodiscard]] Word getHL() const {return (H << 8) | L;}
+    Word getPC(){return PC;}
+    Word getA(){return A;}
+    Word getB(){return B;}
+    Word getC(){return C;}    
 
     // Separan los 16 bits en dos de 8.
     void setAF(Word v) { A = (v >> 8); F = v & 0x00F0; } // F tiene 4 bits bajos siempre en 0 por definicion
@@ -57,8 +61,6 @@ public:
         else   F &= ~f;
     }
     void handleInterrupts();
-    // GETTERS
-    Word getPC(){return PC;}
 private:
     Bus& bus;
 

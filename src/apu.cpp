@@ -4,11 +4,19 @@
 static SDL_AudioDeviceID audioDevice = 0;
 
 APU::APU(){
-    soundEnabled = false;
+    soundEnabled = true;
+    channel1On = true;
+    channel2On = false;
+    channel3On = false;
+    channel4On = false;
     sampleCounter = 0;
 
-    // --- INICIALIZAR CANAL 1 ---
-    NR10 = 0; NR11 = 0; NR12 = 0; NR13 = 0; NR14 = 0;
+    NR10 = 0x80; NR11 = 0xBF; NR12 = 0xF3; NR13 = 0xFF; NR14 = 0xBF;
+    NR21 = 0x3F; NR22 = 0x00; NR23 = 0xFF; NR24 = 0xBF;
+    NR30 = 0x7F; NR31 = 0xFF; NR32 = 0x9F; NR33 = 0xFF; NR34 = 0xBF;
+    NR41 = 0xFF; NR42 = 0x00; NR43 = 0x00; NR44 = 0xBF;
+    NR50 = 0x77; NR51 = 0xF3;
+    
     timer1 = 0;
     dutyPointer1 = 0;
     frequency1 = 0;
@@ -87,68 +95,83 @@ void APU::tickLength(bool enabled, int& timer, bool& channelOn) {
 }
 
 Byte APU::read(Word address) const {
+    if (address == 0xFF26) {
+        Byte res = 0x70;
+        if (soundEnabled) res |= 0x80;
+        if (channel4On) res |= 0x08;
+        if (channel3On) res |= 0x04;
+        if (channel2On) res |= 0x02;
+        if (channel1On) res |= 0x01;
+        return res;
+    }
+
     if (address >= 0xFF30 && address <= 0xFF3F) {
         return waveRam[address - 0xFF30];
     }
+
     switch (address) {
-        case 0xFF10: return NR10 | 0x80; 
-        case 0xFF11: return NR11 | 0x3F; // Solo los 2 bits más altos (Duty) se pueden leer
-        case 0xFF12: return NR12;
-        case 0xFF13: return 0xFF;        // NR13 es "Write-Only" (Solo escritura)
-        case 0xFF14: return NR14 | 0xBF; // Solo el bit 6 (Length enable) se puede leer
-        case 0xFF16: return NR21 | 0x3F; // Solo los 2 bits de Duty son leíbles
-        case 0xFF17: return NR22;
-        case 0xFF18: return 0xFF;        // Frecuencia baja es Write-Only
-        case 0xFF19: return NR24 | 0xBF; // Solo el bit de Length es leíble
-        case 0xFF24: return NR50; 
-        case 0xFF25: return NR51;
-        case 0xFF1A: return NR30 | 0x7F; // Solo Bit 7 es leíble
-        case 0xFF1B: return 0xFF;        // Write-only
-        case 0xFF1C: return NR32 | 0x9F; // Solo Bits 5 y 6 son leíbles
-        case 0xFF1D: return 0xFF;        // Write-only
-        case 0xFF1E: return NR34 | 0xBF; // Solo Bit 6 es leíble
-        case 0xFF20: return 0xFF;        // Write-only
-        case 0xFF21: return NR42;
-        case 0xFF22: return NR43;
-        case 0xFF23: return NR44 | 0xBF; // Solo el bit 6 es leíble
-        case 0xFF26: {
-            Byte status = 0x70;
-            if (soundEnabled) status |= 0x80;
-            if (channel1On) status |= 0x01;
-            if (channel2On) status |= 0x02;
-            if (channel3On) status |= 0x04;
-            if (channel4On) status |= 0x08;
-            return status;
-        }
+        // --- Canal 1 ---
+        case 0xFF10: return NR10 | 0x80;
+        case 0xFF11: return NR11 | 0x3F;
+        case 0xFF12: return NR12 | 0x00;
+        case 0xFF13: return 0xFF;       
+        case 0xFF14: return NR14 | 0xBF;
+        
+        // --- Canal 2 ---
+        case 0xFF15: return 0xFF;
+        case 0xFF16: return NR21 | 0x3F;
+        case 0xFF17: return NR22 | 0x00;
+        case 0xFF18: return 0xFF;       
+        case 0xFF19: return NR24 | 0xBF;
+        
+        // --- Canal 3 ---
+        case 0xFF1A: return NR30 | 0x7F;
+        case 0xFF1B: return 0xFF;
+        case 0xFF1C: return NR32 | 0x9F;
+        case 0xFF1D: return 0xFF;
+        case 0xFF1E: return NR34 | 0xBF;
+        
+        // --- Canal 4 ---
+        case 0xFF1F: return 0xFF;
+        case 0xFF20: return 0xFF;
+        case 0xFF21: return NR42 | 0x00;
+        case 0xFF22: return NR43 | 0x00;
+        case 0xFF23: return NR44 | 0xBF;
+        
+        // --- Control de Paneo y Volumen ---
+        case 0xFF24: return NR50 | 0x00;
+        case 0xFF25: return NR51 | 0x00;
         default: return 0xFF;
     }
 }
 
 void APU::write(Word address, Byte value) {
+    //std::cout << "APU WRITE 0x" << std::hex << address << " <- 0x" << (int)value << std::dec << "\n";
     // NR52 (0xFF26) - Control Maestro
     if (address == 0xFF26) {
-        soundEnabled = ((value >> 7) & 1) == 1;
-        if (!soundEnabled) {
-            channel1On = false;
-            channel2On = false;
-            channel3On = false;
-            channel4On = false;
+        bool turningOn = (value & 0x80) != 0;
+        if (soundEnabled && !turningOn) {
 
             NR10 = 0; NR11 = 0; NR12 = 0; NR13 = 0; NR14 = 0;
             NR21 = 0; NR22 = 0; NR23 = 0; NR24 = 0;
             NR30 = 0; NR31 = 0; NR32 = 0; NR33 = 0; NR34 = 0;
             NR41 = 0; NR42 = 0; NR43 = 0; NR44 = 0;
             NR50 = 0; NR51 = 0;
-        }
-        return;
-    }
-    
-    if (!soundEnabled) return;
 
+            channel1On = false;
+            channel2On = false;
+            channel3On = false;
+            channel4On = false;
+        }
+        
+        soundEnabled = turningOn;
+        return; 
+    }
     if (address >= 0xFF30 && address <= 0xFF3F) {
         waveRam[address - 0xFF30] = value;
         return;
     }
+    if (!soundEnabled) return;
 
     switch (address) {
         case 0xFF10: NR10 = value; break;
@@ -158,9 +181,9 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF12: 
             NR12 = value;
-            if ((NR12 & 0xF8) == 0) {
+            /*if ((NR12 & 0xF8) == 0) {
                 if (channel1On) channel1On = false;
-            }
+            }*/
             break;
         case 0xFF13: 
             NR13 = value; 
@@ -177,7 +200,7 @@ void APU::write(Word address, Byte value) {
             // --- TRIGGER (Bit 7) ---
             if ((value & 0x80) != 0) {
                 channel1On = ((NR12 & 0xF8) != 0);
-                
+
                 if (lengthTimer1 == 0) lengthTimer1 = 64;
 
                 currentVolume1 = (NR12 >> 4) & 0x0F;
@@ -213,9 +236,9 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF17: 
             NR22 = value;
-            if ((NR22 & 0xF8) == 0) {
+            /*if ((NR22 & 0xF8) == 0) {
                 channel2On = false;
-            }
+            }*/
             break;
         case 0xFF18: 
             NR23 = value; 
@@ -230,7 +253,7 @@ void APU::write(Word address, Byte value) {
             // --- TRIGGER CANAL 2 (Bit 7) ---
             if ((value & 0x80) != 0) {
                 channel2On = ((NR22 & 0xF8) != 0);
-                
+
                 if (lengthTimer2 == 0) lengthTimer2 = 64;
 
                 currentVolume2 = (NR22 >> 4) & 0x0F; 
@@ -273,7 +296,7 @@ void APU::write(Word address, Byte value) {
             if ((value & 0x80) != 0) {
                 // Validación del DAC del Canal 3
                 channel3On = ((NR30 & 0x80) != 0);
-                
+
                 if (lengthTimer3 == 0) lengthTimer3 = 256;
                 
                 // Reiniciamos el puntero de la muestra
@@ -289,7 +312,7 @@ void APU::write(Word address, Byte value) {
             break;
         case 0xFF21: 
             NR42 = value;
-            if ((NR42 & 0xF8) == 0) channel4On = false;
+            //if ((NR42 & 0xF8) == 0) channel4On = false;
             break;
         case 0xFF22: 
             NR43 = value; 
@@ -301,7 +324,7 @@ void APU::write(Word address, Byte value) {
             // --- TRIGGER CANAL 4 (Bit 7) ---
             if ((value & 0x80) != 0) {
                 channel4On = ((NR42 & 0xF8) != 0);
-                
+
                 if (lengthTimer4 == 0) lengthTimer4 = 64;
 
                 currentVolume4 = (NR42 >> 4) & 0x0F;

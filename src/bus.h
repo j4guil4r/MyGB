@@ -73,4 +73,5 @@ public:
     Byte joypadSelect = 0xCF; // Lo que el juego nos pide leer (Bits 4 y 5)
 private:
     std::string serialOutput = "";
+    Byte serialData = 0x00;
 };

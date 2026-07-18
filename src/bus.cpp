@@ -13,6 +13,9 @@ Bus::Bus() {
 
 // EL MAPA DE MEMORIA (LECTURA)
 Byte Bus::read(Word addr) const {
+    if (addr == 0xFF01) {
+        return serialData;
+    }
     // 1. ROM (0000 - 7FFF)
     if (addr < 0x8000) {
         return cartridge.read(addr);
@@ -80,8 +83,9 @@ Byte Bus::read(Word addr) const {
         if (addr == 0xFF06) return tma;
         if (addr == 0xFF07) return tac;
 
+        // XDDDD
         // Serial (Para debug, opcional en lectura)
-        if (addr == 0xFF01) return 0;
+        //if (addr == 0xFF01) return 0;
 
         return 0;
     }
@@ -100,6 +104,23 @@ Byte Bus::read(Word addr) const {
 
 // EL MAPA DE MEMORIA (ESCRITURA)
 void Bus::write(Word addr, Byte data) {
+
+    // --- PUERTO SERIAL ---
+    if (addr == 0xFF01) {
+        serialData = data;
+        // Puede que tengas que hacer return aquí si tu diseño lo requiere, 
+        // o dejar que se guarde en tu arreglo de memoria genérico.
+        auto c = static_cast<char>(data);
+        serialOutput += c;
+    }
+    else if (addr == 0xFF02) {
+        // Interceptor de Blargg
+        if (data == 0x81) {
+            std::cout << (char)serialData << std::flush;
+        }
+        // Guardas el valor de control si tienes una variable para él
+    }
+
     // 1. ROM
     if (addr < 0x8000) {
         cartridge.write(addr, data);
@@ -164,10 +185,10 @@ void Bus::write(Word addr, Byte data) {
         }
 
         // Serial Output (Debug Blargg)
-        if (addr == 0xFF01) {
-            auto c = static_cast<char>(data);
-            serialOutput += c;
-        }
+        //if (addr == 0xFF01) {
+        //    auto c = static_cast<char>(data);
+        //    serialOutput += c;
+        //}
 
         // Timers
         else if (addr == 0xFF04) { div = 0; divCounter = 0; }
