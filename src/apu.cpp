@@ -198,11 +198,15 @@ Byte APU::read(Word address) const {
 }
 
 void APU::write(Word address, Byte value) {
-    //std::cout << "APU WRITE 0x" << std::hex << address << " <- 0x" << (int)value << std::dec << "\n";
     // NR52 (0xFF26) - Control Maestro
+    if (!soundEnabled && address != 0xFF26) {
+        if (address == 0xFF11) { lengthTimer1 = 64 - (value & 0x3F); return; }
+        if (address == 0xFF16) { lengthTimer2 = 64 - (value & 0x3F); return; }
+        if (address == 0xFF1B) { lengthTimer3 = 256 - value; return; }
+        if (address == 0xFF20) { lengthTimer4 = 64 - (value & 0x3F); return; }
+        return;
+    }
     if (address == 0xFF26) {
-        //std::cout << "[NR52 WRITE] Valor: 0x" << std::hex << (int)value 
-        //     << " | Apagando: " << ((value & 0x80) == 0 ? "SI" : "NO") << "\n";
         bool turningOn = (value & 0x80) != 0;
 
         if (!soundEnabled && turningOn) {
@@ -230,7 +234,6 @@ void APU::write(Word address, Byte value) {
         waveRam[address - 0xFF30] = value;
         return;
     }
-    if (!soundEnabled) return;
 
     switch (address) {
         case 0xFF10: {
@@ -329,8 +332,7 @@ void APU::write(Word address, Byte value) {
                         channel1On = false;
                     }
                 }
-                
-                // Calculamos el timer inicial según la fórmula del procesador
+
                 timer1 = (2048 - frequency1) * 4;
             }
             break;
@@ -387,11 +389,7 @@ void APU::write(Word address, Byte value) {
 
                 envelopeDirection2 = (NR22 & 0x08) != 0 ? 1 : -1;
                 envelopePeriod2 = NR22 & 0x07;
-
-                /*if (envelopePeriod2 != 0) {
-                    envelopeTimer2 = envelopePeriod2 * 65536;
-                }*/
-               envelopeTimer2 = envelopePeriod2;
+                envelopeTimer2 = envelopePeriod2;
                 
                 timer2 = (2048 - frequency2) * 4;
             }
