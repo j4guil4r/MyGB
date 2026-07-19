@@ -99,6 +99,53 @@ void APU::tickLength(bool enabled, int& timer, bool& channelOn) {
     }
 }
 
+void APU::tickSweep() {
+    sweepTimer1--;
+
+    if (sweepTimer1 <= 0) {
+        // LEEMOS EL PERIODO DINÁMICAMENTE DIRECTO DEL REGISTRO
+        int currentPeriod = (NR10 >> 4) & 0x07;
+        
+        // El temporizador se recarga con el periodo actual
+        sweepTimer1 = currentPeriod > 0 ? currentPeriod : 8;
+
+        // Evaluamos usando la bandera guardada, pero con el periodo actual
+        if (sweepEnabled1 && currentPeriod > 0) {
+            
+            // Leemos Shift y Dirección dinámicamente
+            int currentShift = NR10 & 0x07;
+            int currentDir = (NR10 & 0x08) != 0 ? -1 : 1;
+
+            if (currentDir == -1) {
+                sweepHasCalculatedWithNegate = true;
+            }
+
+            int shiftAmount = shadowFrequency1 >> currentShift;
+            int calculatedFreq = shadowFrequency1 + (currentDir * shiftAmount);
+
+            // Verificación de Overflow principal
+            if (calculatedFreq > 2047) {
+                channel1On = false; 
+            } 
+            else if (currentShift > 0) {
+                // Aplicar la nueva frecuencia
+                shadowFrequency1 = calculatedFreq;
+                frequency1 = calculatedFreq;
+
+                NR13 = calculatedFreq & 0xFF;
+                NR14 = (NR14 & 0xF8) | ((calculatedFreq >> 8) & 0x07);
+
+                // Súper Quirk: Segunda predicción inmediata
+                int nextShiftAmount = shadowFrequency1 >> currentShift;
+                int nextCalculatedFreq = shadowFrequency1 + (currentDir * nextShiftAmount);
+                if (nextCalculatedFreq > 2047) {
+                    channel1On = false;
+                }
+            }
+        }
+    }
+}
+
 Byte APU::read(Word address) const {
     if (address == 0xFF26) {
         Byte res = 0x70;
@@ -154,6 +201,8 @@ void APU::write(Word address, Byte value) {
     //std::cout << "APU WRITE 0x" << std::hex << address << " <- 0x" << (int)value << std::dec << "\n";
     // NR52 (0xFF26) - Control Maestro
     if (address == 0xFF26) {
+        //std::cout << "[NR52 WRITE] Valor: 0x" << std::hex << (int)value 
+        //     << " | Apagando: " << ((value & 0x80) == 0 ? "SI" : "NO") << "\n";
         bool turningOn = (value & 0x80) != 0;
 
         if (!soundEnabled && turningOn) {
@@ -184,7 +233,17 @@ void APU::write(Word address, Byte value) {
     if (!soundEnabled) return;
 
     switch (address) {
-        case 0xFF10: NR10 = value; break;
+        case 0xFF10: {
+            bool wasNegate = (NR10 & 0x08) != 0;
+            bool isNegate = (value & 0x08) != 0;
+            
+            NR10 = value; 
+
+            if (wasNegate && !isNegate && sweepHasCalculatedWithNegate) {
+                channel1On = false;
+            }
+            break;
+        }
         case 0xFF11: 
             NR11 = value; 
             lengthTimer1 = 64 - (value & 0x3F);
@@ -241,7 +300,7 @@ void APU::write(Word address, Byte value) {
                 /*if (envelopePeriod1 != 0) {
                     envelopeTimer1 = envelopePeriod1 * 65536;
                 }*/
-               envelopeTimer1 = envelopePeriod1;
+                envelopeTimer1 = envelopePeriod1;
 
                 // 3. Configurar el Barrido (Sweep) leyendo NR10
                 shadowFrequency1 = frequency1;
@@ -251,8 +310,25 @@ void APU::write(Word address, Byte value) {
                 
                 // Un tick de Sweep ocurre a 128Hz, que equivale a 32,768 ciclos de CPU.
                 // Si el periodo es 0, el manual indica que el temporizador actúa como si fuera 8.
-                sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 * 32768 : 8 * 32768;
+                //sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 * 32768 : 8 * 32768;
+                sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 : 8;
                 sweepEnabled1 = (sweepPeriod1 > 0 || sweepShift1 > 0);
+
+                sweepHasCalculatedWithNegate = false;
+
+                // --- SOLUCIÓN ERROR 2: CÁLCULO DE OVERFLOW EN EL TRIGGER ---
+                if (sweepShift1 > 0) {
+                    if (sweepDirection1 == -1) {
+                        sweepHasCalculatedWithNegate = true;
+                    }
+                    int shiftAmount = shadowFrequency1 >> sweepShift1;
+                    int calculatedFreq = shadowFrequency1 + (sweepDirection1 * shiftAmount);
+                    
+                    // Si el cálculo supera el máximo permitido (2047), el canal muere
+                    if (calculatedFreq > 2047) {
+                        channel1On = false;
+                    }
+                }
                 
                 // Calculamos el timer inicial según la fórmula del procesador
                 timer1 = (2048 - frequency1) * 4;
@@ -450,6 +526,8 @@ void APU::write(Word address, Byte value) {
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }
+    //if (address == 0xFF26 && (value & 0x80) == 0) {
+    //std::cout << "[NR52] Registros conservados. NR11: 0x" << std::hex << (int)NR11 << "\n";}
 }
 
 void APU::step(int cycles) {
@@ -527,7 +605,7 @@ void APU::step(int cycles) {
                 tickLength(lengthEnabled4, lengthTimer4, channel4On);
                 
                 // 128 Hz: Reloj de Barrido (Sweep)
-                // (Aquí irá la lógica del Sweep más adelante)
+                tickSweep();
                 break;
             case 7:
                 // 64 Hz: Reloj de Envolventes de Volumen
@@ -541,32 +619,6 @@ void APU::step(int cycles) {
         // Avanzamos al siguiente paso (0 a 7)
         frameSequencerStep = (frameSequencerStep + 1) % 8;
     }
-
-    // ==========================================
-    // 3. ACTUALIZACIÓN DE SWEEP (SOLO CANAL 1)
-    // ==========================================
-    if (sweepTimer1 > 0) {
-        sweepTimer1 -= cycles;
-        if (sweepTimer1 <= 0) {
-            int period = sweepPeriod1 > 0 ? sweepPeriod1 : 8;
-            sweepTimer1 += period * 32768;
-
-            if (sweepEnabled1 && sweepShift1 > 0) {
-                int newFreq = shadowFrequency1 + (sweepDirection1 * (shadowFrequency1 >> sweepShift1));
-                
-                if (newFreq > 2047) {
-                    channel1On = false;
-                } 
-                else if (sweepPeriod1 > 0) {
-                    shadowFrequency1 = newFreq;
-                    frequency1 = newFreq;
-                    NR13 = frequency1 & 0xFF;
-                    NR14 = (NR14 & 0xF8) | ((frequency1 >> 8) & 0x07);
-                }
-            }
-        }
-    }
-    
 
     // ==========================================
     // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)

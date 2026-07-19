@@ -125,10 +125,13 @@ private:
     // helpers
     void tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction);
     void tickLength(bool enabled, int& timer, bool& channelOn);
+    void tickSweep();
 
     // --- FRAME SEQUENCER ---
     int frameSequencerTimer = 8192;
     int frameSequencerStep = 0;
+
+    bool sweepHasCalculatedWithNegate = false;
 
 public:
     APU();
