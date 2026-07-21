@@ -74,7 +74,8 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 
             gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles);
-            gbBus.apu.step(deltaCycles);
+            //gbBus.apu.step(deltaCycles);
+            gbBus.apu.syncTo(gbBus.systemCycles);
 
             if (gbBus.ppu.requestVBlankInterrupt) {
                 Byte currentIF = gbBus.read(0xFF0F);
@@ -124,7 +125,7 @@ int main () {
         if (entry.is_regular_file() && entry.path().extension() == ".gb") {
             //std::string parentDir = entry.path().parent_path().filename().string();
             //if (parentDir == "individual" || parentDir == "rom_singles") {
-                if(entry.path().filename() == "02-len ctr.gb") 
+                //if(entry.path().filename() == "09-wave read while on.gb") 
                     testFiles.push_back(entry.path().string());
             //}
         }

@@ -523,7 +523,8 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
 void CPU::step() {
     if (isStopped) return;
     if (isHalted) {
-        cycles += 4;
+        bus.systemCycles += 4;
+        cycles = bus.systemCycles;
         return;
     }
 
@@ -532,7 +533,8 @@ void CPU::step() {
 
     // Decode & Execute
     Instruction inst = instructions[opcode];
-    cycles += inst.cycles;
+    bus.systemCycles += inst.cycles; 
+    cycles = bus.systemCycles;
     (this->*inst.operate)();
 
     if (imeDelay > 0) {
