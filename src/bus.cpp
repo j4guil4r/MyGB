@@ -78,8 +78,10 @@ Byte Bus::read(Word addr) const {
         if (addr == 0xFF0F) return ifRegister;
 
         // Timers
-        if (addr == 0xFF04) return div;
-        if (addr == 0xFF05) return tima;
+        if (addr == 0xFF04) {
+            return (internalDiv >> 8) & 0xFF;
+        }
+        if (addr == 0xFF05) {return tima;}
         if (addr == 0xFF06) return tma;
         if (addr == 0xFF07) return tac;
 
@@ -104,7 +106,6 @@ Byte Bus::read(Word addr) const {
 
 // EL MAPA DE MEMORIA (ESCRITURA)
 void Bus::write(Word addr, Byte data) {
-
     // --- PUERTO SERIAL ---
     if (addr == 0xFF01) {
         serialData = data;
@@ -192,12 +193,32 @@ void Bus::write(Word addr, Byte data) {
 
         // Timers
         else if (addr == 0xFF04) { 
-            div = 0; divCounter = 0;
+            bool oldEdge = getTimerEdge(internalDiv, tac);
+            internalDiv = 0; 
+            bool newEdge = getTimerEdge(internalDiv, tac);
+            
+            if (oldEdge && !newEdge) {
+                if (tima == 0xFF) { tima = tma; requestInterrupt(2); } 
+                else { tima++; }
+            }
             apu.resetSequencerPhase();
+            return;
         }
-        else if (addr == 0xFF05) tima = data;
-        else if (addr == 0xFF06) tma = data;
-        else if (addr == 0xFF07) tac = data;
+        else if (addr == 0xFF05) {
+            tima = data; return;}
+        else if (addr == 0xFF06) {tma = data;return;}
+        else if (addr == 0xFF07) {
+            //tac = data;
+            bool oldEdge = getTimerEdge(internalDiv, tac);
+            tac = data; 
+            bool newEdge = getTimerEdge(internalDiv, tac);
+            
+            if (oldEdge && !newEdge) {
+                if (tima == 0xFF) { tima = tma; requestInterrupt(2); } 
+                else { tima++; }
+            }
+            return;
+        }
 
         // Interrupciones
         else if (addr == 0xFF0F) ifRegister = data;
@@ -222,7 +243,7 @@ void Bus::requestInterrupt(int bit) {
 }
 
 void Bus::updateTimers(const long long cycles) {
-    // 1. DIV (Divider Register)
+  /*  // 1. DIV (Divider Register)
     // Incrementa siempre, a una velocidad de 16384 Hz.
     // La CPU va a 4194304 Hz. 4194304 / 16384 = 256 ciclos de CPU por cada tick de DIV.
     divCounter += cycles;
@@ -259,6 +280,29 @@ void Bus::updateTimers(const long long cycles) {
             } else {
                 tima++;
             }
+        }
+    }*/
+
+    // 1. Procesamos cualquier recarga pendiente
+    if (timaOverflowDelay > 0) {
+        timaOverflowDelay -= cycles;
+        if (timaOverflowDelay <= 0) {
+            tima = tma; // Por fin cargamos TMA
+            requestInterrupt(2); // Pedimos la interrupción
+        }
+    }
+
+    // 2. Lógica del Falling Edge
+    bool oldEdge = getTimerEdge(internalDiv, tac);
+    internalDiv += cycles;
+    bool newEdge = getTimerEdge(internalDiv, tac);
+
+    if (oldEdge && !newEdge) {
+        if (tima == 0xFF) {
+            tima = 0x00; // TIMA se vuelve 0 temporalmente
+            timaOverflowDelay = 4; // Retraso de 1 M-cycle (4 T-cycles)
+        } else {
+            tima++;
         }
     }
 }

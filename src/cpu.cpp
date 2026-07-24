@@ -520,24 +520,32 @@ CPU::CPU(Bus& busReference) : bus(busReference) {
 
 }
 
+void CPU::tick() {
+    cycles += 4;
+    bus.ppu.step(4);
+    bus.apu.step(4);
+    bus.updateTimers(4);
+}
+
+Byte CPU::read(Word address) {
+    tick();
+    return bus.read(address);
+}
+
+void CPU::write(Word address, Byte value) {
+    tick();
+    bus.write(address, value);
+}
+
 void CPU::step() {
-    if (isStopped) return;
-    if (isHalted) {
-        //bus.systemCycles += 4;
-        //cycles = bus.systemCycles;
-        cycles += 4;
+    if (isStopped) {
+        tick();
         return;
     }
-
-    // Fetch
-    Byte opcode = fetchByte();
-
-    // Decode & Execute
-    Instruction inst = instructions[opcode];
-    //bus.systemCycles += inst.cycles;
-    //cycles = bus.systemCycles;
-    cycles += inst.cycles;
-    (this->*inst.operate)();
+    if (isHalted) {
+        tick();
+        return;
+    }
 
     if (imeDelay > 0) {
         imeDelay--;
@@ -545,6 +553,13 @@ void CPU::step() {
             ime = true;
         }
     }
+    // Fetch
+    Byte opcode = fetchByte();
+
+    // Decode & Execute
+    Instruction inst = instructions[opcode];
+    
+    (this->*inst.operate)();   
 }
 
 void CPU::reset() {
@@ -560,15 +575,15 @@ void CPU::reset() {
 
 // FETCH
 Byte CPU::fetchByte() {
-    Byte data = bus.read(PC);
+    Byte data = read(PC);
     PC++;
     return data;
 }
 
 Word CPU::fetchWord() {
-    Byte data1 = bus.read(PC);
+    Byte data1 = read(PC);
     PC++;
-    Byte data2 = bus.read(PC);
+    Byte data2 = read(PC);
     PC++;
     Word data = (data2 << 8) | data1;
     return data;
@@ -648,26 +663,24 @@ void CPU::sub(Byte value) {
 }
 
 void CPU::pushStack(Word value) {
-    // El Stack guarda 2 bytes (16 bits).
-    // Primero guardamos el byte ALTO, luego el BAJO.
-    // Decrementamos SP antes de escribir cada byte.
+    tick();
 
     // 1. High Byte
     SP--;
-    bus.write(SP, (value >> 8) & 0xFF);
+    write(SP, (value >> 8) & 0xFF);
 
     // 2. Low Byte
     SP--;
-    bus.write(SP, value & 0xFF);
+    write(SP, value & 0xFF);
 }
 
 Word CPU::popStack() {
     // 1. Leemos el Byte BAJO primero (porque el Stack es LIFO - Last In First Out)
-    Byte lo = bus.read(SP);
+    Byte lo = read(SP);
     SP++;
 
     // 2. Leemos el Byte ALTO
-    Byte hi = bus.read(SP);
+    Byte hi = read(SP);
     SP++;
 
     // 3. Combinamos
@@ -927,7 +940,6 @@ void CPU::handleInterrupts() {
     }
 
     if ((IE & IF & 0x1F) != 0) {
-        // Esto pasa siempre, tenga IME on u off
         isHalted = false;
     }
 
@@ -937,9 +949,11 @@ void CPU::handleInterrupts() {
     // Miramos si hay alguna interrupción activa QUE ADEMÁS esté habilitada
     // (Ej: Si VBlank (bit 0) está en 1 en ambos registros)
     if (IE & IF & 0x1F) { // 0x1F son los 5 bits de interrupciones válidos
-        ime = false; // Desactivamos interrupciones anidadas automáticamente
+        ime = false;
 
-        // Consumimos 5 ciclos de reloj (la CPU tarda en reaccionar)
+        tick();
+        tick();
+        tick();
 
         // Identificamos cual fue (VBlank es la más prioritaria, bit 0)
         Byte interruptMask = IE & IF;
@@ -996,20 +1010,20 @@ void CPU::OP_UNKNOWN() {
 // =========================================================
 void CPU::OP_NOP() {}
 void CPU::OP_LD_BC_d16() { setBC(fetchWord()); }
-void CPU::OP_LD_BC_A()   { bus.write(getBC(), A);}
-void CPU::OP_INC_BC()    { setBC(getBC() + 1);}
+void CPU::OP_LD_BC_A()   { write(getBC(), A);}
+void CPU::OP_INC_BC()    { tick(); setBC(getBC() + 1);}
 void CPU::OP_INC_B()     { inc(B); }
 void CPU::OP_DEC_B()     { dec(B); }
 void CPU::OP_LD_B_d8()   { B = fetchByte(); }
 void CPU::OP_RLCA()      { rlc(A, false); }
 void CPU::OP_LD_a16_SP() {
     Word addr = fetchWord();
-    bus.write(addr, SP);
-    bus.write(addr + 1, (SP >> 8));
+    write(addr, SP);
+    write(addr + 1, (SP >> 8));
 }
-void CPU::OP_ADD_HL_BC() { addHL(getBC()); }
-void CPU::OP_LD_A_BC()   { A = bus.read(getBC()); }
-void CPU::OP_DEC_BC()    { setBC(getBC() - 1); }
+void CPU::OP_ADD_HL_BC() { tick(); addHL(getBC()); }
+void CPU::OP_LD_A_BC()   { A = read(getBC()); }
+void CPU::OP_DEC_BC()    { tick(); setBC(getBC() - 1); }
 void CPU::OP_INC_C()     { inc(C); }
 void CPU::OP_DEC_C()     { dec(C); }
 void CPU::OP_LD_C_d8()   { C = fetchByte(); }
@@ -1019,12 +1033,13 @@ void CPU::OP_RRCA()      { rrc(A, false); }
 // Opcodes 0x10 - 0x1F
 // =========================================================
 void CPU::OP_STOP()      {
-    fetchByte();
+    //fetchByte();
+    PC++;
     isStopped = true;
 }
 void CPU::OP_LD_DE_d16() { setDE(fetchWord()); }
-void CPU::OP_LD_DE_A()   { bus.write(getDE(), A); }
-void CPU::OP_INC_DE()    { setDE(getDE() + 1); }
+void CPU::OP_LD_DE_A()   { write(getDE(), A); }
+void CPU::OP_INC_DE()    { tick(); setDE(getDE() + 1); }
 void CPU::OP_INC_D()     { inc(D); }
 void CPU::OP_DEC_D()     { dec(D); }
 void CPU::OP_LD_D_d8()   { D = fetchByte(); }
@@ -1033,12 +1048,13 @@ void CPU::OP_RLA()       {
     setFlag(F_Z, false);
 }
 void CPU::OP_JR_r8()     {
+    tick();
     const auto offset = static_cast<int8_t>(fetchByte());
     PC += offset;
 }
-void CPU::OP_ADD_HL_DE() { addHL(getDE()); }
-void CPU::OP_LD_A_DE()   { A = bus.read(getDE()); }
-void CPU::OP_DEC_DE()    { setDE(getDE() - 1); }
+void CPU::OP_ADD_HL_DE() { tick(); addHL(getDE()); }
+void CPU::OP_LD_A_DE()   { A = read(getDE()); }
+void CPU::OP_DEC_DE()    { tick(); setDE(getDE() - 1); }
 void CPU::OP_INC_E()     { inc(E); }
 void CPU::OP_DEC_E()     { dec(E); }
 void CPU::OP_LD_E_d8()   { E = fetchByte(); }
@@ -1055,15 +1071,15 @@ void CPU::OP_JR_NZ_r8()  {
 
     if (!getFlag(F_Z)) {
         PC += offset;
-        cycles += 4;
+        tick();
     }
 }
 void CPU::OP_LD_HL_d16() { setHL(fetchWord()); }
 void CPU::OP_LDI_HL_A() {
-    bus.write(getHL(), A);
+    write(getHL(), A);
     setHL(getHL() + 1);
 }
-void CPU::OP_INC_HL()    { setHL(getHL() + 1); }
+void CPU::OP_INC_HL()    { tick(); setHL(getHL() + 1); }
 void CPU::OP_INC_H()     { inc(H); }
 void CPU::OP_DEC_H()     { dec(H); }
 void CPU::OP_LD_H_d8()   { H = fetchByte(); }
@@ -1073,20 +1089,20 @@ void CPU::OP_JR_Z_r8() {
 
     if (getFlag(F_Z)) {
         PC += offset;
-        cycles += 4;
+        tick();
     }
 }
-void CPU::OP_ADD_HL_HL() { addHL(getHL()); }
+void CPU::OP_ADD_HL_HL() { tick(); addHL(getHL()); }
 void CPU::OP_LDI_A_HL()  {
-    A = bus.read(getHL());
+    A = read(getHL());
     setHL(getHL() + 1); // HL++
 }
-void CPU::OP_DEC_HL()    { setHL(getHL() - 1); }
+void CPU::OP_DEC_HL()    { tick(); setHL(getHL() - 1); }
 void CPU::OP_INC_L()     { inc(L);}
 void CPU::OP_DEC_L()     { dec(L); }
 void CPU::OP_LD_L_d8()   { L = fetchByte(); }
 void CPU::OP_CPL() {
-    A = ~A; // Complement
+    A = ~A;
     setFlag(F_N, true);
     setFlag(F_H, true);
 }
@@ -1099,28 +1115,28 @@ void CPU::OP_JR_NC_r8() {
 
     if (!getFlag(F_C)) {
         PC += offset;
-        cycles += 4;
+        tick();
     }
 }
 void CPU::OP_LD_SP_d16() { SP = fetchWord(); }
 void CPU::OP_LDD_HL_A() {
-    bus.write(getHL(), A);
+    write(getHL(), A);
     setHL(getHL() - 1);
 }
-void CPU::OP_INC_SP()    { SP++; }
+void CPU::OP_INC_SP()    { tick(); SP++; }
 void CPU::OP_INC_aHL() {
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     inc(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_DEC_aHL() {
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     dec(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_LD_aHL_d8() {
     const Byte val = fetchByte();
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_SCF() {
     setFlag(F_N, false);
@@ -1133,15 +1149,15 @@ void CPU::OP_JR_C_r8() {
 
     if (getFlag(F_C)) {
         PC += offset;
-        cycles += 4;
+        tick();
     }
 }
-void CPU::OP_ADD_HL_SP() { addHL(SP); }
+void CPU::OP_ADD_HL_SP() { tick(); addHL(SP); }
 void CPU::OP_LDD_A_HL() {
-    A = bus.read(getHL());
+    A = read(getHL());
     setHL(getHL() - 1);
 }
-void CPU::OP_DEC_SP()    { SP--; }
+void CPU::OP_DEC_SP()    { tick(); SP--; }
 void CPU::OP_INC_A()     { inc(A); }
 void CPU::OP_DEC_A()     { dec(A); }
 void CPU::OP_LD_A_d8()   { A = fetchByte(); }
@@ -1160,7 +1176,7 @@ void CPU::OP_LD_B_D() {B = D;}
 void CPU::OP_LD_B_E() {B = E;}
 void CPU::OP_LD_B_H() {B = H;}
 void CPU::OP_LD_B_L() {B = L;}
-void CPU::OP_LD_B_aHL(){B = bus.read(getHL());}
+void CPU::OP_LD_B_aHL(){B = read(getHL());}
 void CPU::OP_LD_B_A() {B = A;}
 void CPU::OP_LD_C_B() {C = B;}
 void CPU::OP_LD_C_C() {C = C;}
@@ -1168,7 +1184,7 @@ void CPU::OP_LD_C_D() {C = D;}
 void CPU::OP_LD_C_E() {C = E;}
 void CPU::OP_LD_C_H() {C = H;}
 void CPU::OP_LD_C_L() {C = L;}
-void CPU::OP_LD_C_aHL(){C = bus.read(getHL());}
+void CPU::OP_LD_C_aHL(){C = read(getHL());}
 void CPU::OP_LD_C_A() {C = A;}
 
 // =========================================================
@@ -1180,7 +1196,7 @@ void CPU::OP_LD_D_D() { D = D; }
 void CPU::OP_LD_D_E() { D = E; }
 void CPU::OP_LD_D_H() { D = H; }
 void CPU::OP_LD_D_L() { D = L; }
-void CPU::OP_LD_D_aHL() {D = bus.read(getHL());}
+void CPU::OP_LD_D_aHL() {D = read(getHL());}
 void CPU::OP_LD_D_A() {D = A;}
 void CPU::OP_LD_E_B() {E = B;}
 void CPU::OP_LD_E_C() {E = C;}
@@ -1188,7 +1204,7 @@ void CPU::OP_LD_E_D() {E = D;}
 void CPU::OP_LD_E_E() {E = E;}
 void CPU::OP_LD_E_H() {E = H;}
 void CPU::OP_LD_E_L() {E = L;}
-void CPU::OP_LD_E_aHL() { E = bus.read(getHL());}
+void CPU::OP_LD_E_aHL() { E = read(getHL());}
 void CPU::OP_LD_E_A() {E = A;}
 
 // =========================================================
@@ -1200,7 +1216,7 @@ void CPU::OP_LD_H_D()   { H = D;}
 void CPU::OP_LD_H_E()   { H = E;}
 void CPU::OP_LD_H_H()   { H = H;}
 void CPU::OP_LD_H_L()   { H = L;}
-void CPU::OP_LD_H_aHL() { H = bus.read(getHL()); }
+void CPU::OP_LD_H_aHL() { H = read(getHL()); }
 void CPU::OP_LD_H_A()   { H = A; }
 void CPU::OP_LD_L_B()   { L = B; }
 void CPU::OP_LD_L_C()   { L = C; }
@@ -1208,18 +1224,18 @@ void CPU::OP_LD_L_D()   { L = D; }
 void CPU::OP_LD_L_E()   { L = E; }
 void CPU::OP_LD_L_H()   { L = H; }
 void CPU::OP_LD_L_L()   { L = L; }
-void CPU::OP_LD_L_aHL() { L = bus.read(getHL()); }
+void CPU::OP_LD_L_aHL() { L = read(getHL()); }
 void CPU::OP_LD_L_A()   { L = A; }
 
 // =========================================================
 // Opcodes 0x70 - 0x7F
 // =========================================================
-void CPU::OP_LD_aHL_B() { bus.write(getHL(), B); }
-void CPU::OP_LD_aHL_C() { bus.write(getHL(), C);}
-void CPU::OP_LD_aHL_D() { bus.write(getHL(), D);}
-void CPU::OP_LD_aHL_E() { bus.write(getHL(), E);}
-void CPU::OP_LD_aHL_H() { bus.write(getHL(), H);}
-void CPU::OP_LD_aHL_L() { bus.write(getHL(), L);}
+void CPU::OP_LD_aHL_B() { write(getHL(), B); }
+void CPU::OP_LD_aHL_C() { write(getHL(), C);}
+void CPU::OP_LD_aHL_D() { write(getHL(), D);}
+void CPU::OP_LD_aHL_E() { write(getHL(), E);}
+void CPU::OP_LD_aHL_H() { write(getHL(), H);}
+void CPU::OP_LD_aHL_L() { write(getHL(), L);}
 void CPU::OP_HALT()     {            
     // Leemos IE e IF para ver si ya hay una interrupción pendiente
     Byte IE = bus.read(0xFFFF);
@@ -1236,14 +1252,14 @@ void CPU::OP_HALT()     {
         isHalted = true;
     }
 }
-void CPU::OP_LD_aHL_A() { bus.write(getHL(), A); }
+void CPU::OP_LD_aHL_A() { write(getHL(), A); }
 void CPU::OP_LD_A_B()   { A = B; }
 void CPU::OP_LD_A_C()   { A = C; }
 void CPU::OP_LD_A_D()   { A = D; }
 void CPU::OP_LD_A_E()   { A = E; }
 void CPU::OP_LD_A_H()   { A = H; }
 void CPU::OP_LD_A_L()   { A = L; }
-void CPU::OP_LD_A_aHL() { A = bus.read(getHL());}
+void CPU::OP_LD_A_aHL() { A = read(getHL());}
 void CPU::OP_LD_A_A()   { A = A; }
 
 // =========================================================
@@ -1256,7 +1272,7 @@ void CPU::OP_ADD_A_E()   {add(E);}
 void CPU::OP_ADD_A_H()   {add(H);}
 void CPU::OP_ADD_A_L()   {add(L);}
 void CPU::OP_ADD_A_aHL() { 
-    const Byte val = bus.read(getHL());
+    const Byte val = read(getHL());
     add(val);
 }
 void CPU::OP_ADD_A_A()   { add(A); }
@@ -1267,7 +1283,7 @@ void CPU::OP_ADC_A_E()   { adc(E); }
 void CPU::OP_ADC_A_H()   { adc(H); }
 void CPU::OP_ADC_A_L()   { adc(L); }
 void CPU::OP_ADC_A_aHL() {
-    const Byte val = bus.read(getHL());
+    const Byte val = read(getHL());
     adc(val);
 }
 void CPU::OP_ADC_A_A()   { adc(A);}
@@ -1282,7 +1298,7 @@ void CPU::OP_SUB_E()     { sub(E); }
 void CPU::OP_SUB_H()     { sub(H); }
 void CPU::OP_SUB_L()     { sub(L); }
 void CPU::OP_SUB_aHL() {
-    const Byte val = bus.read(getHL());
+    const Byte val = read(getHL());
     sub(val);
 }
 void CPU::OP_SUB_A()     { sub(A); }
@@ -1293,7 +1309,7 @@ void CPU::OP_SBC_A_E()   { sbc(E); }
 void CPU::OP_SBC_A_H()   { sbc(H); }
 void CPU::OP_SBC_A_L()   { sbc(L); }
 void CPU::OP_SBC_A_aHL() {
-    const Byte val = bus.read(getHL());
+    const Byte val = read(getHL());
     sbc(val);
 }
 void CPU::OP_SBC_A_A()   { sbc(A); }
@@ -1307,7 +1323,7 @@ void CPU::OP_AND_D()   { and_op(D); }
 void CPU::OP_AND_E()   { and_op(E); }
 void CPU::OP_AND_H()   { and_op(H); }
 void CPU::OP_AND_L()   { and_op(L); }
-void CPU::OP_AND_aHL() { and_op(bus.read(getHL()));}
+void CPU::OP_AND_aHL() { and_op(read(getHL()));}
 void CPU::OP_AND_A()   { and_op(A);}
 void CPU::OP_XOR_B()   { xor_op(B);}
 void CPU::OP_XOR_C()   { xor_op(C); }
@@ -1315,7 +1331,7 @@ void CPU::OP_XOR_D()   { xor_op(D); }
 void CPU::OP_XOR_E()   { xor_op(E); }
 void CPU::OP_XOR_H()   { xor_op(H); }
 void CPU::OP_XOR_L()   { xor_op(L); }
-void CPU::OP_XOR_aHL() { xor_op(bus.read(getHL())); }
+void CPU::OP_XOR_aHL() { xor_op(read(getHL())); }
 void CPU::OP_XOR_A()   { xor_op(A); }
 
 // =========================================================
@@ -1327,7 +1343,7 @@ void CPU::OP_OR_D()    { or_op(D); }
 void CPU::OP_OR_E()    { or_op(E); }
 void CPU::OP_OR_H()    { or_op(H); }
 void CPU::OP_OR_L()    { or_op(L); }
-void CPU::OP_OR_aHL()  { or_op(bus.read(getHL())); }
+void CPU::OP_OR_aHL()  { or_op(read(getHL())); }
 void CPU::OP_OR_A()    { or_op(A); }
 void CPU::OP_CP_B()    { cp(B);}
 void CPU::OP_CP_C()    { cp(C); }
@@ -1335,16 +1351,17 @@ void CPU::OP_CP_D()    { cp(D); }
 void CPU::OP_CP_E()    { cp(E); }
 void CPU::OP_CP_H()    { cp(H); }
 void CPU::OP_CP_L()    { cp(L); }
-void CPU::OP_CP_aHL()  { cp(bus.read(getHL())); }
+void CPU::OP_CP_aHL()  { cp(read(getHL())); }
 void CPU::OP_CP_A()    { cp(A); }
 
 // =========================================================
 // Opcodes 0xC0 - 0xCF
 // =========================================================
 void CPU::OP_RET_NZ() {
+    tick();
     if (!getFlag(F_Z)) {
+        tick();
         PC = popStack();
-        cycles += 12;
     }
 }
 void CPU::OP_POP_BC()      { setBC(popStack());}
@@ -1352,10 +1369,11 @@ void CPU::OP_JP_NZ_a16() {
     Word target = fetchWord();
     if (!getFlag(F_Z)) {
         PC = target;
-        cycles += 4;
+        tick();
     }
 }
 void CPU::OP_JP_a16() {
+    tick();
     Word targetAddress = fetchWord();
     PC = targetAddress;
 }
@@ -1364,7 +1382,6 @@ void CPU::OP_CALL_NZ_a16() {
     if (!getFlag(F_Z)) {
         pushStack(PC);
         PC = target;
-        cycles += 12;
     }
 }
 void CPU::OP_PUSH_BC()     { pushStack(getBC());}
@@ -1374,17 +1391,18 @@ void CPU::OP_RST_00H() {
     PC = 0x0000;
 }
 void CPU::OP_RET_Z() {
+    tick();
     if (getFlag(F_Z)) {
+        tick();
         PC = popStack();
-        cycles += 12;
     }      
 }
-void CPU::OP_RET()         { PC = popStack();}
+void CPU::OP_RET()         { tick(); PC = popStack();}
 void CPU::OP_JP_Z_a16() {
     Word target = fetchWord();
     if (getFlag(F_Z)) {
+        tick();
         PC = target;
-        cycles += 4;
     }
 }
 
@@ -1393,7 +1411,6 @@ void CPU::OP_CALL_Z_a16() {
     if (getFlag(F_Z)) {
         pushStack(PC);
         PC = target;
-        cycles += 12;
     }
 }
 void CPU::OP_CALL_a16() {
@@ -1412,17 +1429,18 @@ void CPU::OP_RST_08H() {
 // =========================================================
 
 void CPU::OP_RET_NC() {
+    tick();
     if (!getFlag(F_C)) {
+        tick();
         PC = popStack();
-        cycles += 12;
     }
 }
 void CPU::OP_POP_DE()      {setDE(popStack());}
 void CPU::OP_JP_NC_a16() {
     Word target = fetchWord();
     if (!getFlag(F_C)) {
+        tick();
         PC = target;
-        cycles += 4;
     }
 }
 void CPU::OP_CALL_NC_a16() {
@@ -1430,7 +1448,6 @@ void CPU::OP_CALL_NC_a16() {
     if (!getFlag(F_C)) {
         pushStack(PC);
         PC = target;
-        cycles += 12;
     }
 }
 void CPU::OP_PUSH_DE()     { pushStack(getDE());}
@@ -1440,12 +1457,14 @@ void CPU::OP_RST_10H() {
     PC = 0x0010;
 }
 void CPU::OP_RET_C() {
+    tick();
     if (getFlag(F_C)) {
+        tick();
         PC = popStack();
-        cycles += 12;
     }
 }
-void CPU::OP_RETI() { 
+void CPU::OP_RETI() {
+    tick();
     // Regresamos de donde vinimos (igual que RET)
     PC = popStack();
     // Volvemos a encender las interrupciones
@@ -1454,8 +1473,8 @@ void CPU::OP_RETI() {
 void CPU::OP_JP_C_a16() {
     Word target = fetchWord();
     if (getFlag(F_C)) {
+        tick();
         PC = target;
-        cycles += 4;
     }
 }
 void CPU::OP_CALL_C_a16() {
@@ -1463,7 +1482,6 @@ void CPU::OP_CALL_C_a16() {
     if (getFlag(F_C)) {
         pushStack(PC);
         PC = target;
-        cycles += 12;
     }
 }
 void CPU::OP_SBC_A_d8()    { sbc(fetchByte()); }
@@ -1476,9 +1494,9 @@ void CPU::OP_RST_18H() {
 // Opcodes 0xE0 - 0xEF
 // =========================================================
 
-void CPU::OP_LDH_a8_A()  { bus.write(0xFF00 + fetchByte(), A); }
+void CPU::OP_LDH_a8_A()  { write(0xFF00 + fetchByte(), A); }
 void CPU::OP_POP_HL()    { setHL(popStack()); }
-void CPU::OP_LD_C_A_BUS()    { bus.write(0xFF00 + C, A); }
+void CPU::OP_LD_C_A_BUS()    { write(0xFF00 + C, A); }
 void CPU::OP_PUSH_HL()   { pushStack(getHL()); }
 void CPU::OP_AND_d8()    { and_op(fetchByte()); }
 void CPU::OP_RST_20H()   { pushStack(PC); PC = 0x0020; }
@@ -1495,19 +1513,20 @@ void CPU::OP_ADD_SP_r8() {
     setFlag(F_C, result > 0xFF);
 
     // Realizamos la suma real (SP es de 16 bits)
+    tick(); tick();
     SP += offset;
 }
 void CPU::OP_JP_HL()     { PC = getHL(); /*Salta a la direccion de HL*/ }
-void CPU::OP_LD_a16_A()  { bus.write(fetchWord(), A);}
+void CPU::OP_LD_a16_A()  { write(fetchWord(), A);}
 void CPU::OP_XOR_d8()    { xor_op(fetchByte());}
 void CPU::OP_RST_28H()   { pushStack(PC); PC = 0x0028; }
 
 // =========================================================
 // Opcodes 0xF0 - 0xFF
 // =========================================================
-void CPU::OP_LDH_A_a8()  { A = bus.read(0xFF00 + fetchByte()); }
+void CPU::OP_LDH_A_a8()  { A = read(0xFF00 + fetchByte()); }
 void CPU::OP_POP_AF()    { setAF(popStack()); }
-void CPU::OP_LD_A_C_BUS()    { A = bus.read(0xFF00 + C); }
+void CPU::OP_LD_A_C_BUS()    { A = read(0xFF00 + C); }
 void CPU::OP_DI() {
     ime = false;
     imeDelay = 0;
@@ -1523,11 +1542,13 @@ void CPU::OP_LD_HL_SP_r8() {
     setFlag(F_N, false);
     setFlag(F_H, ((SP & 0x0F) + (static_cast<uint8_t>(offset) & 0x0F)) > 0x0F);
     setFlag(F_C, result > 0xFF);
+    
+    tick();
 
     setHL(SP + offset);
 }
-void CPU::OP_LD_SP_HL()  { SP = getHL(); }
-void CPU::OP_LD_A_a16()  { A = bus.read(fetchWord()); }
+void CPU::OP_LD_SP_HL()  { tick(); SP = getHL(); }
+void CPU::OP_LD_A_a16()  { A = read(fetchWord()); }
 void CPU::OP_EI(){
     //ime = true;
     imeDelay = 2;
@@ -1552,9 +1573,9 @@ void CPU::OP_UNKNOWN_CB() {
 void CPU::OP_PREFIX_CB() {
     const Byte& cb_opcode = fetchByte();
     Instruction inst = cb_instructions[cb_opcode];
-    if (inst.cycles > 0) {
-        cycles += (inst.cycles - 4); 
-    }
+    //if (inst.cycles > 0) {
+    //    cycles += (inst.cycles - 4); 
+    //}
     (this->*inst.operate)();
 }
 
@@ -1569,9 +1590,9 @@ void CPU::OP_CB_RLC_H()   { rlc(H, true); }
 void CPU::OP_CB_RLC_L()   { rlc(L, true); }
 void CPU::OP_CB_RLC_aHL() { 
     // Para HL hay que leer y luego escribir de vuelta
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     rlc(val, true);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_RLC_A()   { rlc(A, true); }
 void CPU::OP_CB_RRC_B()   { rrc(B, true); }
@@ -1581,9 +1602,9 @@ void CPU::OP_CB_RRC_E()   { rrc(E, true); }
 void CPU::OP_CB_RRC_H()   { rrc(H, true); }
 void CPU::OP_CB_RRC_L()   { rrc(L, true); }
 void CPU::OP_CB_RRC_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     rrc(val, true);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_RRC_A()   { rrc(A, true); }
 
@@ -1597,9 +1618,9 @@ void CPU::OP_CB_RL_E()   { rl(E); }
 void CPU::OP_CB_RL_H()   { rl(H); }
 void CPU::OP_CB_RL_L()   { rl(L); }
 void CPU::OP_CB_RL_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     rl(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_RL_A()   { rl(A); }
 
@@ -1610,9 +1631,9 @@ void CPU::OP_CB_RR_E()   { rr(E); }
 void CPU::OP_CB_RR_H()   { rr(H); }
 void CPU::OP_CB_RR_L()   { rr(L); }
 void CPU::OP_CB_RR_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     rr(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_RR_A()   { rr(A); }
 
@@ -1626,9 +1647,9 @@ void CPU::OP_CB_SLA_E()   { sla(E); }
 void CPU::OP_CB_SLA_H()   { sla(H); }
 void CPU::OP_CB_SLA_L()   { sla(L); }
 void CPU::OP_CB_SLA_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     sla(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_SLA_A()   { sla(A); }
 
@@ -1639,9 +1660,9 @@ void CPU::OP_CB_SRA_E()   { sra(E); }
 void CPU::OP_CB_SRA_H()   { sra(H); }
 void CPU::OP_CB_SRA_L()   { sra(L); }
 void CPU::OP_CB_SRA_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     sra(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_SRA_A()   { sra(A); }
 
@@ -1655,9 +1676,9 @@ void CPU::OP_CB_SWAP_E()   { swap(E); }
 void CPU::OP_CB_SWAP_H()   { swap(H); }
 void CPU::OP_CB_SWAP_L()   { swap(L); }
 void CPU::OP_CB_SWAP_aHL() { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     swap(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_SWAP_A()   { swap(A); }
 
@@ -1668,9 +1689,9 @@ void CPU::OP_CB_SRL_E()    { srl(E); }
 void CPU::OP_CB_SRL_H()    { srl(H); }
 void CPU::OP_CB_SRL_L()    { srl(L); }
 void CPU::OP_CB_SRL_aHL()  { 
-    Byte val = bus.read(getHL());
+    Byte val = read(getHL());
     srl(val);
-    bus.write(getHL(), val);
+    write(getHL(), val);
 }
 void CPU::OP_CB_SRL_A()    { srl(A); }
 
@@ -1680,12 +1701,12 @@ void CPU::OP_CB_SRL_A()    { srl(A); }
 void CPU::OP_CB_BIT_0_B() { bit(B, 0); } void CPU::OP_CB_BIT_0_C() { bit(C, 0); }
 void CPU::OP_CB_BIT_0_D() { bit(D, 0); } void CPU::OP_CB_BIT_0_E() { bit(E, 0); }
 void CPU::OP_CB_BIT_0_H() { bit(H, 0); } void CPU::OP_CB_BIT_0_L() { bit(L, 0); }
-void CPU::OP_CB_BIT_0_aHL() { bit(bus.read(getHL()), 0); } void CPU::OP_CB_BIT_0_A() { bit(A, 0); }
+void CPU::OP_CB_BIT_0_aHL() { bit(read(getHL()), 0); } void CPU::OP_CB_BIT_0_A() { bit(A, 0); }
 
 void CPU::OP_CB_BIT_1_B() { bit(B, 1); } void CPU::OP_CB_BIT_1_C() { bit(C, 1); }
 void CPU::OP_CB_BIT_1_D() { bit(D, 1); } void CPU::OP_CB_BIT_1_E() { bit(E, 1); }
 void CPU::OP_CB_BIT_1_H() { bit(H, 1); } void CPU::OP_CB_BIT_1_L() { bit(L, 1); }
-void CPU::OP_CB_BIT_1_aHL() { bit(bus.read(getHL()), 1); } void CPU::OP_CB_BIT_1_A() { bit(A, 1); }
+void CPU::OP_CB_BIT_1_aHL() { bit(read(getHL()), 1); } void CPU::OP_CB_BIT_1_A() { bit(A, 1); }
 
 // =========================================================
 // Opcodes CB: 0x50 - 0x5F (Bits 2 y 3)
@@ -1693,12 +1714,12 @@ void CPU::OP_CB_BIT_1_aHL() { bit(bus.read(getHL()), 1); } void CPU::OP_CB_BIT_1
 void CPU::OP_CB_BIT_2_B() { bit(B, 2); } void CPU::OP_CB_BIT_2_C() { bit(C, 2); }
 void CPU::OP_CB_BIT_2_D() { bit(D, 2); } void CPU::OP_CB_BIT_2_E() { bit(E, 2); }
 void CPU::OP_CB_BIT_2_H() { bit(H, 2); } void CPU::OP_CB_BIT_2_L() { bit(L, 2); }
-void CPU::OP_CB_BIT_2_aHL() { bit(bus.read(getHL()), 2); } void CPU::OP_CB_BIT_2_A() { bit(A, 2); }
+void CPU::OP_CB_BIT_2_aHL() { bit(read(getHL()), 2); } void CPU::OP_CB_BIT_2_A() { bit(A, 2); }
 
 void CPU::OP_CB_BIT_3_B() { bit(B, 3); } void CPU::OP_CB_BIT_3_C() { bit(C, 3); }
 void CPU::OP_CB_BIT_3_D() { bit(D, 3); } void CPU::OP_CB_BIT_3_E() { bit(E, 3); }
 void CPU::OP_CB_BIT_3_H() { bit(H, 3); } void CPU::OP_CB_BIT_3_L() { bit(L, 3); }
-void CPU::OP_CB_BIT_3_aHL() { bit(bus.read(getHL()), 3); } void CPU::OP_CB_BIT_3_A() { bit(A, 3); }
+void CPU::OP_CB_BIT_3_aHL() { bit(read(getHL()), 3); } void CPU::OP_CB_BIT_3_A() { bit(A, 3); }
 
 // =========================================================
 // Opcodes CB: 0x60 - 0x6F (Bits 4 y 5)
@@ -1706,12 +1727,12 @@ void CPU::OP_CB_BIT_3_aHL() { bit(bus.read(getHL()), 3); } void CPU::OP_CB_BIT_3
 void CPU::OP_CB_BIT_4_B() { bit(B, 4); } void CPU::OP_CB_BIT_4_C() { bit(C, 4); }
 void CPU::OP_CB_BIT_4_D() { bit(D, 4); } void CPU::OP_CB_BIT_4_E() { bit(E, 4); }
 void CPU::OP_CB_BIT_4_H() { bit(H, 4); } void CPU::OP_CB_BIT_4_L() { bit(L, 4); }
-void CPU::OP_CB_BIT_4_aHL() { bit(bus.read(getHL()), 4); } void CPU::OP_CB_BIT_4_A() { bit(A, 4); }
+void CPU::OP_CB_BIT_4_aHL() { bit(read(getHL()), 4); } void CPU::OP_CB_BIT_4_A() { bit(A, 4); }
 
 void CPU::OP_CB_BIT_5_B() { bit(B, 5); } void CPU::OP_CB_BIT_5_C() { bit(C, 5); }
 void CPU::OP_CB_BIT_5_D() { bit(D, 5); } void CPU::OP_CB_BIT_5_E() { bit(E, 5); }
 void CPU::OP_CB_BIT_5_H() { bit(H, 5); } void CPU::OP_CB_BIT_5_L() { bit(L, 5); }
-void CPU::OP_CB_BIT_5_aHL() { bit(bus.read(getHL()), 5); } void CPU::OP_CB_BIT_5_A() { bit(A, 5); }
+void CPU::OP_CB_BIT_5_aHL() { bit(read(getHL()), 5); } void CPU::OP_CB_BIT_5_A() { bit(A, 5); }
 
 // =========================================================
 // Opcodes CB: 0x70 - 0x7F (Bits 6 y 7)
@@ -1719,12 +1740,12 @@ void CPU::OP_CB_BIT_5_aHL() { bit(bus.read(getHL()), 5); } void CPU::OP_CB_BIT_5
 void CPU::OP_CB_BIT_6_B() { bit(B, 6); } void CPU::OP_CB_BIT_6_C() { bit(C, 6); }
 void CPU::OP_CB_BIT_6_D() { bit(D, 6); } void CPU::OP_CB_BIT_6_E() { bit(E, 6); }
 void CPU::OP_CB_BIT_6_H() { bit(H, 6); } void CPU::OP_CB_BIT_6_L() { bit(L, 6); }
-void CPU::OP_CB_BIT_6_aHL() { bit(bus.read(getHL()), 6); } void CPU::OP_CB_BIT_6_A() { bit(A, 6); }
+void CPU::OP_CB_BIT_6_aHL() { bit(read(getHL()), 6); } void CPU::OP_CB_BIT_6_A() { bit(A, 6); }
 
 void CPU::OP_CB_BIT_7_B() { bit(B, 7); } void CPU::OP_CB_BIT_7_C() { bit(C, 7); }
 void CPU::OP_CB_BIT_7_D() { bit(D, 7); } void CPU::OP_CB_BIT_7_E() { bit(E, 7); }
 void CPU::OP_CB_BIT_7_H() { bit(H, 7); } void CPU::OP_CB_BIT_7_L() { bit(L, 7); }
-void CPU::OP_CB_BIT_7_aHL() { bit(bus.read(getHL()), 7); } void CPU::OP_CB_BIT_7_A() { bit(A, 7); }
+void CPU::OP_CB_BIT_7_aHL() { bit(read(getHL()), 7); } void CPU::OP_CB_BIT_7_A() { bit(A, 7); }
 
 // =========================================================
 // Opcodes CB: 0x80 - 0x8F (Bits 0 y 1)
@@ -1732,12 +1753,12 @@ void CPU::OP_CB_BIT_7_aHL() { bit(bus.read(getHL()), 7); } void CPU::OP_CB_BIT_7
 void CPU::OP_CB_RES_0_B() { res(0, B); } void CPU::OP_CB_RES_0_C() { res(0, C); }
 void CPU::OP_CB_RES_0_D() { res(0, D); } void CPU::OP_CB_RES_0_E() { res(0, E); }
 void CPU::OP_CB_RES_0_H() { res(0, H); } void CPU::OP_CB_RES_0_L() { res(0, L); }
-void CPU::OP_CB_RES_0_aHL() { Byte val = bus.read(getHL()); res(0, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_0_A() { res(0, A); }
+void CPU::OP_CB_RES_0_aHL() { Byte val = read(getHL()); res(0, val); write(getHL(), val); } void CPU::OP_CB_RES_0_A() { res(0, A); }
 
 void CPU::OP_CB_RES_1_B() { res(1, B); } void CPU::OP_CB_RES_1_C() { res(1, C); }
 void CPU::OP_CB_RES_1_D() { res(1, D); } void CPU::OP_CB_RES_1_E() { res(1, E); }
 void CPU::OP_CB_RES_1_H() { res(1, H); } void CPU::OP_CB_RES_1_L() { res(1, L); }
-void CPU::OP_CB_RES_1_aHL() { Byte val = bus.read(getHL()); res(1, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_1_A() { res(1, A); }
+void CPU::OP_CB_RES_1_aHL() { Byte val = read(getHL()); res(1, val); write(getHL(), val); } void CPU::OP_CB_RES_1_A() { res(1, A); }
 
 // =========================================================
 // Opcodes CB: 0x90 - 0x9F (Bits 2 y 3)
@@ -1745,12 +1766,12 @@ void CPU::OP_CB_RES_1_aHL() { Byte val = bus.read(getHL()); res(1, val); bus.wri
 void CPU::OP_CB_RES_2_B() { res(2, B); } void CPU::OP_CB_RES_2_C() { res(2, C); }
 void CPU::OP_CB_RES_2_D() { res(2, D); } void CPU::OP_CB_RES_2_E() { res(2, E); }
 void CPU::OP_CB_RES_2_H() { res(2, H); } void CPU::OP_CB_RES_2_L() { res(2, L); }
-void CPU::OP_CB_RES_2_aHL() { Byte val = bus.read(getHL()); res(2, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_2_A() { res(2, A); }
+void CPU::OP_CB_RES_2_aHL() { Byte val = read(getHL()); res(2, val); write(getHL(), val); } void CPU::OP_CB_RES_2_A() { res(2, A); }
 
 void CPU::OP_CB_RES_3_B() { res(3, B); } void CPU::OP_CB_RES_3_C() { res(3, C); }
 void CPU::OP_CB_RES_3_D() { res(3, D); } void CPU::OP_CB_RES_3_E() { res(3, E); }
 void CPU::OP_CB_RES_3_H() { res(3, H); } void CPU::OP_CB_RES_3_L() { res(3, L); }
-void CPU::OP_CB_RES_3_aHL() { Byte val = bus.read(getHL()); res(3, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_3_A() { res(3, A); }
+void CPU::OP_CB_RES_3_aHL() { Byte val = read(getHL()); res(3, val); write(getHL(), val); } void CPU::OP_CB_RES_3_A() { res(3, A); }
 
 // =========================================================
 // Opcodes CB: 0xA0 - 0xAF (Bits 4 y 5)
@@ -1758,12 +1779,12 @@ void CPU::OP_CB_RES_3_aHL() { Byte val = bus.read(getHL()); res(3, val); bus.wri
 void CPU::OP_CB_RES_4_B() { res(4, B); } void CPU::OP_CB_RES_4_C() { res(4, C); }
 void CPU::OP_CB_RES_4_D() { res(4, D); } void CPU::OP_CB_RES_4_E() { res(4, E); }
 void CPU::OP_CB_RES_4_H() { res(4, H); } void CPU::OP_CB_RES_4_L() { res(4, L); }
-void CPU::OP_CB_RES_4_aHL() { Byte val = bus.read(getHL()); res(4, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_4_A() { res(4, A); }
+void CPU::OP_CB_RES_4_aHL() { Byte val = read(getHL()); res(4, val); write(getHL(), val); } void CPU::OP_CB_RES_4_A() { res(4, A); }
 
 void CPU::OP_CB_RES_5_B() { res(5, B); } void CPU::OP_CB_RES_5_C() { res(5, C); }
 void CPU::OP_CB_RES_5_D() { res(5, D); } void CPU::OP_CB_RES_5_E() { res(5, E); }
 void CPU::OP_CB_RES_5_H() { res(5, H); } void CPU::OP_CB_RES_5_L() { res(5, L); }
-void CPU::OP_CB_RES_5_aHL() { Byte val = bus.read(getHL()); res(5, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_5_A() { res(5, A); }
+void CPU::OP_CB_RES_5_aHL() { Byte val = read(getHL()); res(5, val); write(getHL(), val); } void CPU::OP_CB_RES_5_A() { res(5, A); }
 
 // =========================================================
 // Opcodes CB: 0xB0 - 0xBF (Bits 6 y 7)
@@ -1771,12 +1792,12 @@ void CPU::OP_CB_RES_5_aHL() { Byte val = bus.read(getHL()); res(5, val); bus.wri
 void CPU::OP_CB_RES_6_B() { res(6, B); } void CPU::OP_CB_RES_6_C() { res(6, C); }
 void CPU::OP_CB_RES_6_D() { res(6, D); } void CPU::OP_CB_RES_6_E() { res(6, E); }
 void CPU::OP_CB_RES_6_H() { res(6, H); } void CPU::OP_CB_RES_6_L() { res(6, L); }
-void CPU::OP_CB_RES_6_aHL() { Byte val = bus.read(getHL()); res(6, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_6_A() { res(6, A); }
+void CPU::OP_CB_RES_6_aHL() { Byte val = read(getHL()); res(6, val); write(getHL(), val); } void CPU::OP_CB_RES_6_A() { res(6, A); }
 
 void CPU::OP_CB_RES_7_B() { res(7, B); } void CPU::OP_CB_RES_7_C() { res(7, C); }
 void CPU::OP_CB_RES_7_D() { res(7, D); } void CPU::OP_CB_RES_7_E() { res(7, E); }
 void CPU::OP_CB_RES_7_H() { res(7, H); } void CPU::OP_CB_RES_7_L() { res(7, L); }
-void CPU::OP_CB_RES_7_aHL() { Byte val = bus.read(getHL()); res(7, val); bus.write(getHL(), val); } void CPU::OP_CB_RES_7_A() { res(7, A); }
+void CPU::OP_CB_RES_7_aHL() { Byte val = read(getHL()); res(7, val); write(getHL(), val); } void CPU::OP_CB_RES_7_A() { res(7, A); }
 
 
 // =========================================================
@@ -1785,39 +1806,39 @@ void CPU::OP_CB_RES_7_aHL() { Byte val = bus.read(getHL()); res(7, val); bus.wri
 void CPU::OP_CB_SET_0_B() { set(0, B); } void CPU::OP_CB_SET_0_C() { set(0, C); }
 void CPU::OP_CB_SET_0_D() { set(0, D); } void CPU::OP_CB_SET_0_E() { set(0, E); }
 void CPU::OP_CB_SET_0_H() { set(0, H); } void CPU::OP_CB_SET_0_L() { set(0, L); }
-void CPU::OP_CB_SET_0_aHL() { Byte val = bus.read(getHL()); set(0, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_0_A() { set(0, A); }
+void CPU::OP_CB_SET_0_aHL() { Byte val = read(getHL()); set(0, val); write(getHL(), val); } void CPU::OP_CB_SET_0_A() { set(0, A); }
 
 void CPU::OP_CB_SET_1_B() { set(1, B); } void CPU::OP_CB_SET_1_C() { set(1, C); }
 void CPU::OP_CB_SET_1_D() { set(1, D); } void CPU::OP_CB_SET_1_E() { set(1, E); }
 void CPU::OP_CB_SET_1_H() { set(1, H); } void CPU::OP_CB_SET_1_L() { set(1, L); }
-void CPU::OP_CB_SET_1_aHL() { Byte val = bus.read(getHL()); set(1, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_1_A() { set(1, A); }
+void CPU::OP_CB_SET_1_aHL() { Byte val = read(getHL()); set(1, val); write(getHL(), val); } void CPU::OP_CB_SET_1_A() { set(1, A); }
 
 void CPU::OP_CB_SET_2_B() { set(2, B); } void CPU::OP_CB_SET_2_C() { set(2, C); }
 void CPU::OP_CB_SET_2_D() { set(2, D); } void CPU::OP_CB_SET_2_E() { set(2, E); }
 void CPU::OP_CB_SET_2_H() { set(2, H); } void CPU::OP_CB_SET_2_L() { set(2, L); }
-void CPU::OP_CB_SET_2_aHL() { Byte val = bus.read(getHL()); set(2, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_2_A() { set(2, A); }
+void CPU::OP_CB_SET_2_aHL() { Byte val = read(getHL()); set(2, val); write(getHL(), val); } void CPU::OP_CB_SET_2_A() { set(2, A); }
 
 void CPU::OP_CB_SET_3_B() { set(3, B); } void CPU::OP_CB_SET_3_C() { set(3, C); }
 void CPU::OP_CB_SET_3_D() { set(3, D); } void CPU::OP_CB_SET_3_E() { set(3, E); }
 void CPU::OP_CB_SET_3_H() { set(3, H); } void CPU::OP_CB_SET_3_L() { set(3, L); }
-void CPU::OP_CB_SET_3_aHL() { Byte val = bus.read(getHL()); set(3, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_3_A() { set(3, A); }
+void CPU::OP_CB_SET_3_aHL() { Byte val = read(getHL()); set(3, val); write(getHL(), val); } void CPU::OP_CB_SET_3_A() { set(3, A); }
 
 void CPU::OP_CB_SET_4_B() { set(4, B); } void CPU::OP_CB_SET_4_C() { set(4, C); }
 void CPU::OP_CB_SET_4_D() { set(4, D); } void CPU::OP_CB_SET_4_E() { set(4, E); }
 void CPU::OP_CB_SET_4_H() { set(4, H); } void CPU::OP_CB_SET_4_L() { set(4, L); }
-void CPU::OP_CB_SET_4_aHL() { Byte val = bus.read(getHL()); set(4, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_4_A() { set(4, A); }
+void CPU::OP_CB_SET_4_aHL() { Byte val = read(getHL()); set(4, val); write(getHL(), val); } void CPU::OP_CB_SET_4_A() { set(4, A); }
 
 void CPU::OP_CB_SET_5_B() { set(5, B); } void CPU::OP_CB_SET_5_C() { set(5, C); }
 void CPU::OP_CB_SET_5_D() { set(5, D); } void CPU::OP_CB_SET_5_E() { set(5, E); }
 void CPU::OP_CB_SET_5_H() { set(5, H); } void CPU::OP_CB_SET_5_L() { set(5, L); }
-void CPU::OP_CB_SET_5_aHL() { Byte val = bus.read(getHL()); set(5, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_5_A() { set(5, A); }
+void CPU::OP_CB_SET_5_aHL() { Byte val = read(getHL()); set(5, val); write(getHL(), val); } void CPU::OP_CB_SET_5_A() { set(5, A); }
 
 void CPU::OP_CB_SET_6_B() { set(6, B); } void CPU::OP_CB_SET_6_C() { set(6, C); }
 void CPU::OP_CB_SET_6_D() { set(6, D); } void CPU::OP_CB_SET_6_E() { set(6, E); }
 void CPU::OP_CB_SET_6_H() { set(6, H); } void CPU::OP_CB_SET_6_L() { set(6, L); }
-void CPU::OP_CB_SET_6_aHL() { Byte val = bus.read(getHL()); set(6, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_6_A() { set(6, A); }
+void CPU::OP_CB_SET_6_aHL() { Byte val = read(getHL()); set(6, val); write(getHL(), val); } void CPU::OP_CB_SET_6_A() { set(6, A); }
 
 void CPU::OP_CB_SET_7_B() { set(7, B); } void CPU::OP_CB_SET_7_C() { set(7, C); }
 void CPU::OP_CB_SET_7_D() { set(7, D); } void CPU::OP_CB_SET_7_E() { set(7, E); }
 void CPU::OP_CB_SET_7_H() { set(7, H); } void CPU::OP_CB_SET_7_L() { set(7, L); }
-void CPU::OP_CB_SET_7_aHL() { Byte val = bus.read(getHL()); set(7, val); bus.write(getHL(), val); } void CPU::OP_CB_SET_7_A() { set(7, A); }
+void CPU::OP_CB_SET_7_aHL() { Byte val = read(getHL()); set(7, val); write(getHL(), val); } void CPU::OP_CB_SET_7_A() { set(7, A); }

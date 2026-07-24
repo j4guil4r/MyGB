@@ -75,6 +75,9 @@ private:
     // ============= HELPERS ===============//
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
     Word fetchWord(); // Lee 2 bytes (16-bits) en PC y hace PC+=2
+    void tick();
+    Byte read(Word address);
+    void write(Word address, Byte value);
 
     void add(Byte value);
     void adc(Byte value);

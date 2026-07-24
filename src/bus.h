@@ -48,17 +48,31 @@ public:
     Byte ifRegister = 0; // 0xFF0F - Interrupt Flag
 
     // --- TIMERS ---
-    Byte div = 0;   // 0xFF04 - Divider Register (Incrementa siempre)
+    //Byte div = 0;   // 0xFF04 - Divider Register (Incrementa siempre)
     Byte tima = 0;  // 0xFF05 - Timer Counter (El que dispara la interrupción)
     Byte tma = 0;   // 0xFF06 - Timer Modulo (Valor de recarga)
     Byte tac = 0;   // 0xFF07 - Timer Control (Velocidad y On/Off)
+    int timaOverflowDelay = 0;
 
     // Contadores internos para gestionar la frecuencia
     // La GB corre a 4194304 Hz.
-    long long divCounter = 0;   // Acumulador para el registro DIV
-    long long timerCounter = 0; // Acumulador para el registro TIMA
+    //long long divCounter = 0;   // Acumulador para el registro DIV
+    //long long timerCounter = 0; // Acumulador para el registro TIMA
 
     void updateTimers(long long cycles);
+    Word internalDiv = 0;
+
+    bool getTimerEdge(uint16_t currentDiv, Byte currentTac) {
+        bool enable = (currentTac & 0x04) != 0;
+        int bit = 0;
+        switch (currentTac & 0x03) {
+            case 0: bit = 9; break; // 4096 Hz
+            case 1: bit = 3; break; // 262144 Hz
+            case 2: bit = 5; break; // 65536 Hz
+            case 3: bit = 7; break; // 16384 Hz
+        }
+        return ((currentDiv >> bit) & 1) && enable;
+    }
 
     // Lo usaremos para que el Timer le diga a la CPU "¡Oye!"
     void requestInterrupt(int bit);
