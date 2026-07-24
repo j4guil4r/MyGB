@@ -19,7 +19,7 @@ public:
 
     Cartridge cartridge;    
 
-    [[nodiscard]] Byte read(Word addr);
+    [[nodiscard]] Byte read(Word addr) const;
     void write(Word addr, Byte data);
 
     std::string getSerialOutput () const;
@@ -72,7 +72,7 @@ public:
     Byte joypadAction = 0x0F; // Acción: Start(3), Select(2), B(1), A(0)
     Byte joypadSelect = 0xCF; // Lo que el juego nos pide leer (Bits 4 y 5)
 
-    uint64_t systemCycles = 0;
+    //uint64_t systemCycles = 0;
 private:
     std::string serialOutput = "";
     Byte serialData = 0x00;

@@ -141,20 +141,14 @@ private:
     void tickChannel4();
     void tickFrameSequencer();
 
-    uint64_t lastSyncCycle = 0;
-
-    mutable int lastReadWavePtr = -1;
-    mutable int lastWriteWavePtr = -1;
-
 public:
     APU();
     ~APU();
 
-    Byte read(Word address);
+    Byte read(Word address) const;
     void write(Word address, Byte value);
     void resetSequencerPhase();
 
     void step(int cycles);
-    void syncTo(uint64_t currentSystemCycle);
     void runMixer(int cycles);
 };

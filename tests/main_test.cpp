@@ -74,8 +74,7 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 
             gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles);
-            //gbBus.apu.step(deltaCycles);
-            gbBus.apu.syncTo(gbBus.systemCycles);
+            gbBus.apu.step(deltaCycles);
 
             if (gbBus.ppu.requestVBlankInterrupt) {
                 Byte currentIF = gbBus.read(0xFF0F);

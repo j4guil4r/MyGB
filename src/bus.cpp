@@ -12,7 +12,7 @@ Bus::Bus() {
 
 
 // EL MAPA DE MEMORIA (LECTURA)
-Byte Bus::read(Word addr) {
+Byte Bus::read(Word addr) const {
     if (addr == 0xFF01) {
         return serialData;
     }
@@ -66,7 +66,6 @@ Byte Bus::read(Word addr) {
 
         // --- APU ---
         if (addr >= 0XFF10 && addr <= 0xFF3F) {
-            apu.syncTo(systemCycles);
             return apu.read(addr);
         }
 
@@ -167,7 +166,6 @@ void Bus::write(Word addr, Byte data) {
 
         // --- APU ---
         if (addr >= 0xFF10 && addr <= 0xFF3F) {
-            apu.syncTo(systemCycles);
             apu.write(addr, data);
             return;
         }

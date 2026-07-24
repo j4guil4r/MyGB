@@ -146,7 +146,7 @@ void APU::tickSweep() {
     }
 }
 
-Byte APU::read(Word address) {
+Byte APU::read(Word address) const {
     if (address == 0xFF26) {
         Byte res = 0x70;
         if (soundEnabled) res |= 0x80;
@@ -159,13 +159,8 @@ Byte APU::read(Word address) {
 
     if (address >= 0xFF30 && address <= 0xFF3F) {
         if (channel3On && (NR30 & 0x80) != 0) {
-            if ((wavePointer & 1) == 0) {
-                if (lastReadWavePtr != wavePointer) {
-                    lastReadWavePtr = wavePointer;
-                    return waveRam[wavePointer / 2];
-                }
-            } else {
-                lastReadWavePtr = -1;
+            if ((timer3 == 2 || timer3 == 6) && (wavePointer & 1) == 0) {
+                return waveRam[wavePointer / 2];
             }
             return 0xFF; 
         }
@@ -243,13 +238,8 @@ void APU::write(Word address, Byte value) {
     }
     if (address >= 0xFF30 && address <= 0xFF3F) {
         if (channel3On && (NR30 & 0x80) != 0) {
-            if ((wavePointer & 1) == 0) {
-                if (lastWriteWavePtr != wavePointer) {
-                    lastWriteWavePtr = wavePointer;
-                    waveRam[wavePointer / 2] = value;
-                }
-            } else {
-                lastWriteWavePtr = -1;
+            if ((timer3 == 2 || timer3 == 6) && (wavePointer & 1) == 0) {
+                waveRam[wavePointer / 2] = value;
             }
             return;
         }
@@ -461,21 +451,14 @@ void APU::write(Word address, Byte value) {
 
                 if (lengthTimer3 == 0) {
                     lengthTimer3 = 256;
-                    // 2. EL SÚPER QUIRK CORREGIDO:
-                    // Baja a 63 SOLO si está habilitado Y en la primera mitad
                     if (isEnabled && !isFirstHalf) {
                         lengthTimer3 = 255;
                     }
                 }
                 
-                // Reiniciamos el puntero de la muestra
                 wavePointer = 0;
 
-                lastReadWavePtr = -1;
-                lastWriteWavePtr = -1;
-
-                //timer3 = ((2048 - frequency3) * 2) + 4;
-                timer3 = 6;
+                timer3 = ((2048 - frequency3) * 2);
             }
             break;
         }
@@ -556,103 +539,13 @@ void APU::write(Word address, Byte value) {
 
 void APU::step(int cycles) {
     
-    // ==========================================
-    // 1. RELOJ INTERNO (T-CYCLES)
-    // ==========================================
     if (soundEnabled) {
-        for (int i = 0; i < cycles; i++) {
+        for (int i = 0; i < cycles; ++i) {
             tick();
         }
     }
 
-    // ==========================================
-    // 2. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
-    // ==========================================
-
-    sampleCounter += cycles;
-    const int CYCLES_PER_SAMPLE = 4194304 / 44100;
-
-    while (sampleCounter >= CYCLES_PER_SAMPLE) {
-        sampleCounter -= CYCLES_PER_SAMPLE;
-
-        float sample1 = 0.0f;
-        float sample2 = 0.0f;
-        float sample3 = 0.0f;
-        float sample4 = 0.0f;
-
-        // Muestra del Canal 1
-        if (channel1On && volume1 > 0.0f) {
-            int dutyIndex1 = (NR11 >> 6) & 0x03;
-            sample1 = dutyCycles[dutyIndex1][dutyPointer1] * volume1;
-        }
-
-        // Muestra del Canal 2
-        if (channel2On && volume2 > 0.0f) {
-            int dutyIndex2 = (NR21 >> 6) & 0x03;
-            sample2 = dutyCycles[dutyIndex2][dutyPointer2] * volume2;
-        }
-
-        // Muestra del Canal 3
-        if (channel3On && (NR30 & 0x80)) {
-            Byte waveByte = sampleBuffer; 
-            
-            int nibble = (wavePointer % 2 == 0) ? (waveByte >> 4) : (waveByte & 0x0F);
-            int volumeCode = (NR32 >> 5) & 0x03;
-            int shiftedNibble = 0;
-
-            switch (volumeCode) {
-                case 0: shiftedNibble = 0; break;           
-                case 1: shiftedNibble = nibble; break;      
-                case 2: shiftedNibble = nibble >> 1; break; 
-                case 3: shiftedNibble = nibble >> 2; break; 
-            }
-
-            sample3 = (shiftedNibble / 7.5f) - 1.0f;
-        }
-
-        // Muestra del Canal 4
-        if (channel4On && volume4 > 0.0f) {
-            sample4 = ((lfsr & 1) == 0 ? 1.0f : -1.0f) * volume4;
-        }
-
-        // ==========================================
-        // 2.1 DISTRIBUCIÓN ESTÉREO (PANNING - NR51)
-        // ==========================================
-        float leftMix = 0.0f;
-        float rightMix = 0.0f;
-
-        if (NR51 & 0x10) leftMix += sample1; 
-        if (NR51 & 0x01) rightMix += sample1; 
-        if (NR51 & 0x20) leftMix += sample2;  
-        if (NR51 & 0x02) rightMix += sample2; 
-        if (NR51 & 0x40) leftMix += sample3;  
-        if (NR51 & 0x04) rightMix += sample3; 
-        if (NR51 & 0x80) leftMix += sample4;  
-        if (NR51 & 0x08) rightMix += sample4; 
-
-        // ==========================================
-        // 2.2 VOLUMEN MAESTRO (FADE-OUT - NR50)
-        // ==========================================
-        float masterLeftVol = ((NR50 >> 4) & 0x07) / 7.0f;  
-        float masterRightVol = (NR50 & 0x07) / 7.0f;
-
-        float finalLeft = leftMix * masterLeftVol * 0.1f;
-        float finalRight = rightMix * masterRightVol * 0.1f;
-
-        audioBuffer.push_back(finalLeft);
-        audioBuffer.push_back(finalRight);
-    }
-
-    // ==========================================
-    // 3. ENVÍO A SDL2
-    // ==========================================
-    if (audioBuffer.size() >= 1024) {
-        const Uint32 MAX_AUDIO_QUEUE_BYTES = 16384;
-        if (SDL_GetQueuedAudioSize(audioDevice) < MAX_AUDIO_QUEUE_BYTES) {
-            SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
-        }
-        audioBuffer.clear();
-    }
+    runMixer(cycles);
 }
 
 void APU::tick(){
@@ -764,25 +657,6 @@ void APU::tickFrameSequencer() {
         // Avanzamos al siguiente paso (0 a 7)
         frameSequencerStep = (frameSequencerStep + 1) % 8;
     }
-}
-
-void APU::syncTo(uint64_t currentSystemCycle) {
-    if (currentSystemCycle <= lastSyncCycle) return;
-    
-    uint64_t cyclesToRun = currentSystemCycle - lastSyncCycle;
-
-    // 1. Avanzamos el silicio T-cycle a T-cycle
-    if (soundEnabled) {
-        for (uint64_t i = 0; i < cyclesToRun; i++) {
-            tick();
-        }
-    }
-
-    // 2. Procesamos el audio en lote para SDL2
-    runMixer(cyclesToRun);
-
-    // 3. Sellamos la marca de tiempo
-    lastSyncCycle = currentSystemCycle;
 }
 
 void APU::runMixer(int cycles) {
