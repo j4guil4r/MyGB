@@ -47,13 +47,14 @@ int main(int argc, char* argv[]) {
             long long cyclesBefore = cpu.getCycles();
             
             cpu.step();
+            cpu.handleInterrupts();
             
             long long deltaCycles = cpu.getCycles() - cyclesBefore;
             cyclesThisFrame += deltaCycles;
 
-            gbBus.updateTimers(deltaCycles);
+            /*gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles);
-            gbBus.apu.step(deltaCycles);
+            gbBus.apu.step(deltaCycles);*/
 
             // Procesar interrupción de V-Blank (Bit 0)
             if (gbBus.ppu.requestVBlankInterrupt) {
@@ -68,7 +69,6 @@ int main(int argc, char* argv[]) {
                 gbBus.ppu.requestStatInterrupt = false;
             }
 
-            cpu.handleInterrupts();
         }
 
         if (gbBus.ppu.frameReady) {

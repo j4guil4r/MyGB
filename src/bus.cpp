@@ -79,7 +79,7 @@ Byte Bus::read(Word addr) const {
 
         // Timers
         if (addr == 0xFF04) return div;
-        if (addr == 0xFF05) return tima;
+        if (addr == 0xFF05) {printf("[TIMING] Test LEE TIMA -> %02X\n", tima);return tima;}
         if (addr == 0xFF06) return tma;
         if (addr == 0xFF07) return tac;
 
@@ -104,7 +104,6 @@ Byte Bus::read(Word addr) const {
 
 // EL MAPA DE MEMORIA (ESCRITURA)
 void Bus::write(Word addr, Byte data) {
-
     // --- PUERTO SERIAL ---
     if (addr == 0xFF01) {
         serialData = data;
@@ -192,12 +191,12 @@ void Bus::write(Word addr, Byte data) {
 
         // Timers
         else if (addr == 0xFF04) { 
-            div = 0; divCounter = 0;
+            div = 0; divCounter = 0; timerCounter = 0;
             apu.resetSequencerPhase();
         }
-        else if (addr == 0xFF05) tima = data;
-        else if (addr == 0xFF06) tma = data;
-        else if (addr == 0xFF07) tac = data;
+        else if (addr == 0xFF05) {printf("[TIMING] Test ESCRIBE %02X en TIMA\n", data);tima = data; return;}
+        else if (addr == 0xFF06) {tma = data;return;}
+        else if (addr == 0xFF07) {printf("[TIMING] Test ESCRIBE %02X en TAC\n", data);tac = data;return;}
 
         // Interrupciones
         else if (addr == 0xFF0F) ifRegister = data;

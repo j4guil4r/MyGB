@@ -27,7 +27,7 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
         //Word pcHistory[30] = {0};
         //int historyIdx = 0;
         while (!testFinished && cpu.getCycles() < maxCycles) {
-            long long cyclesBefore = cpu.getCycles();
+            //long long cyclesBefore = cpu.getCycles();
 
             Word currentPC = cpu.getPC();
 
@@ -70,11 +70,11 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
             
             cpu.step();
             
-            long long deltaCycles = cpu.getCycles() - cyclesBefore;
+            /*long long deltaCycles = cpu.getCycles() - cyclesBefore;
 
             gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles);
-            gbBus.apu.step(deltaCycles);
+            gbBus.apu.step(deltaCycles);*/
 
             if (gbBus.ppu.requestVBlankInterrupt) {
                 Byte currentIF = gbBus.read(0xFF0F);
@@ -117,14 +117,16 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 }
 
 int main () {
-    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/dmg_sound/rom_singles";
+    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/mem_timing/individual";
+    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/instr_timing";
+    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/cpu_instrs/";
     std::vector<std::string> testFiles;
 
     for (const auto& entry : fs::recursive_directory_iterator(baseDirectory)) {
         if (entry.is_regular_file() && entry.path().extension() == ".gb") {
-            //std::string parentDir = entry.path().parent_path().filename().string();
+            std::string parentDir = entry.path().parent_path().filename().string();
             //if (parentDir == "individual" || parentDir == "rom_singles") {
-                //if(entry.path().filename() == "09-wave read while on.gb") 
+                //if(entry.path().filename() == "02-interrupts.gb") 
                     testFiles.push_back(entry.path().string());
             //}
         }
