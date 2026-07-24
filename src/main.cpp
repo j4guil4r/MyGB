@@ -46,14 +46,14 @@ int main(int argc, char* argv[]) {
         while (cyclesThisFrame < MAX_CYCLES_PER_FRAME) {
             long long cyclesBefore = cpu.getCycles();
             
-            cpu.step(); // Ejecutamos 1 instrucción
+            cpu.step();
             
             long long deltaCycles = cpu.getCycles() - cyclesBefore;
             cyclesThisFrame += deltaCycles;
 
             gbBus.updateTimers(deltaCycles);
             gbBus.ppu.step(deltaCycles);
-            gbBus.apu.step(deltaCycles); 
+            gbBus.apu.step(deltaCycles);
 
             // Procesar interrupción de V-Blank (Bit 0)
             if (gbBus.ppu.requestVBlankInterrupt) {

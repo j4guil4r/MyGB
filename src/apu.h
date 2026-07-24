@@ -125,10 +125,21 @@ private:
     // helpers
     void tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction);
     void tickLength(bool enabled, int& timer, bool& channelOn);
+    void tickSweep();
 
     // --- FRAME SEQUENCER ---
     int frameSequencerTimer = 8192;
     int frameSequencerStep = 0;
+
+    bool sweepHasCalculatedWithNegate = false;
+    Byte sampleBuffer = 0;
+
+    void tick();
+    void tickChannel1();
+    void tickChannel2();
+    void tickChannel3();
+    void tickChannel4();
+    void tickFrameSequencer();
 
 public:
     APU();
@@ -136,6 +147,8 @@ public:
 
     Byte read(Word address) const;
     void write(Word address, Byte value);
+    void resetSequencerPhase();
 
     void step(int cycles);
+    void runMixer(int cycles);
 };
