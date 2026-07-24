@@ -528,14 +528,13 @@ void CPU::tick() {
 }
 
 Byte CPU::read(Word address) {
-    Byte data = bus.read(address);
     tick();
-    return data;
+    return bus.read(address);
 }
 
 void CPU::write(Word address, Byte value) {
-    bus.write(address, value);
     tick();
+    bus.write(address, value);
 }
 
 void CPU::step() {
@@ -1381,15 +1380,13 @@ void CPU::OP_JP_a16() {
 void CPU::OP_CALL_NZ_a16() {
     Word target = fetchWord();
     if (!getFlag(F_Z)) {
-        tick();
         pushStack(PC);
         PC = target;
     }
 }
-void CPU::OP_PUSH_BC()     { tick(); tick(); pushStack(getBC());}
+void CPU::OP_PUSH_BC()     { pushStack(getBC());}
 void CPU::OP_ADD_A_d8()    { add(fetchByte()); }
 void CPU::OP_RST_00H() {
-    tick();
     pushStack(PC);
     PC = 0x0000;
 }
@@ -1412,20 +1409,17 @@ void CPU::OP_JP_Z_a16() {
 void CPU::OP_CALL_Z_a16() { 
     Word target = fetchWord();
     if (getFlag(F_Z)) {
-        tick();
         pushStack(PC);
         PC = target;
     }
 }
 void CPU::OP_CALL_a16() {
-    tick();
     Word targetAddr = fetchWord();
     pushStack(PC);
     PC = targetAddr;
 }
 void CPU::OP_ADC_A_d8()    { adc(fetchByte()); }
 void CPU::OP_RST_08H() {
-    tick();
     pushStack(PC);
     PC = 0x0008;
 }
@@ -1452,15 +1446,13 @@ void CPU::OP_JP_NC_a16() {
 void CPU::OP_CALL_NC_a16() {
     Word target = fetchWord();
     if (!getFlag(F_C)) {
-        tick();
         pushStack(PC);
         PC = target;
     }
 }
-void CPU::OP_PUSH_DE()     { tick(); pushStack(getDE());}
+void CPU::OP_PUSH_DE()     { pushStack(getDE());}
 void CPU::OP_SUB_d8()      { sub(fetchByte());}
 void CPU::OP_RST_10H() {
-    tick();
     pushStack(PC);
     PC = 0x0010;
 }
@@ -1488,14 +1480,12 @@ void CPU::OP_JP_C_a16() {
 void CPU::OP_CALL_C_a16() {
     Word target = fetchWord();
     if (getFlag(F_C)) {
-        tick();
         pushStack(PC);
         PC = target;
     }
 }
 void CPU::OP_SBC_A_d8()    { sbc(fetchByte()); }
 void CPU::OP_RST_18H() {
-    tick();
     pushStack(PC);
     PC = 0x0018;
 }
@@ -1507,9 +1497,9 @@ void CPU::OP_RST_18H() {
 void CPU::OP_LDH_a8_A()  { write(0xFF00 + fetchByte(), A); }
 void CPU::OP_POP_HL()    { setHL(popStack()); }
 void CPU::OP_LD_C_A_BUS()    { write(0xFF00 + C, A); }
-void CPU::OP_PUSH_HL()   { tick(); pushStack(getHL()); }
+void CPU::OP_PUSH_HL()   { pushStack(getHL()); }
 void CPU::OP_AND_d8()    { and_op(fetchByte()); }
-void CPU::OP_RST_20H()   { tick(); pushStack(PC); PC = 0x0020; }
+void CPU::OP_RST_20H()   { pushStack(PC); PC = 0x0020; }
 void CPU::OP_ADD_SP_r8() {
     auto offset = static_cast<int8_t>(fetchByte());
 
@@ -1529,7 +1519,7 @@ void CPU::OP_ADD_SP_r8() {
 void CPU::OP_JP_HL()     { PC = getHL(); /*Salta a la direccion de HL*/ }
 void CPU::OP_LD_a16_A()  { write(fetchWord(), A);}
 void CPU::OP_XOR_d8()    { xor_op(fetchByte());}
-void CPU::OP_RST_28H()   { tick(); pushStack(PC); PC = 0x0028; }
+void CPU::OP_RST_28H()   { pushStack(PC); PC = 0x0028; }
 
 // =========================================================
 // Opcodes 0xF0 - 0xFF
@@ -1541,9 +1531,9 @@ void CPU::OP_DI() {
     ime = false;
     imeDelay = 0;
 }
-void CPU::OP_PUSH_AF()   { tick(); pushStack(getAF()); }
+void CPU::OP_PUSH_AF()   { pushStack(getAF()); }
 void CPU::OP_OR_d8()     { or_op(fetchByte()); }
-void CPU::OP_RST_30H()   { tick(); pushStack(PC); PC = 0x0030; }
+void CPU::OP_RST_30H()   { pushStack(PC); PC = 0x0030; }
 void CPU::OP_LD_HL_SP_r8() {
     auto offset = static_cast<int8_t>(fetchByte());
     int result = (SP & 0xFF) + static_cast<uint8_t>(offset);
@@ -1564,7 +1554,7 @@ void CPU::OP_EI(){
     imeDelay = 2;
 }
 void CPU::OP_CP_d8()     { cp(fetchByte()); }
-void CPU::OP_RST_38H()   { tick(); pushStack(PC); PC = 0x0038; }
+void CPU::OP_RST_38H()   { pushStack(PC); PC = 0x0038; }
 
 
 

@@ -118,8 +118,8 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 
 int main () {
     //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/mem_timing/individual";
-    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/instr_timing";
-    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/cpu_instrs/";
+    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/instr_timing";
+    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/cpu_instrs/";
     std::vector<std::string> testFiles;
 
     for (const auto& entry : fs::recursive_directory_iterator(baseDirectory)) {
