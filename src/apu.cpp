@@ -71,11 +71,6 @@ APU::~APU() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void APU::resetSequencerPhase() {
-    frameSequencerTimer = 8192;
-    //frameSequencerStep = 0;
-}
-
 void APU::tickEnvelope(int& period, int& timer, int& currentVol, float& volFloat, int direction) {
     if (period > 0) {
         timer--;
@@ -99,53 +94,6 @@ void APU::tickLength(bool enabled, int& timer, bool& channelOn) {
     }
 }
 
-void APU::tickSweep() {
-    sweepTimer1--;
-
-    if (sweepTimer1 <= 0) {
-        // LEEMOS EL PERIODO DINÁMICAMENTE DIRECTO DEL REGISTRO
-        int currentPeriod = (NR10 >> 4) & 0x07;
-        
-        // El temporizador se recarga con el periodo actual
-        sweepTimer1 = currentPeriod > 0 ? currentPeriod : 8;
-
-        // Evaluamos usando la bandera guardada, pero con el periodo actual
-        if (sweepEnabled1 && currentPeriod > 0) {
-            
-            // Leemos Shift y Dirección dinámicamente
-            int currentShift = NR10 & 0x07;
-            int currentDir = (NR10 & 0x08) != 0 ? -1 : 1;
-
-            if (currentDir == -1) {
-                sweepHasCalculatedWithNegate = true;
-            }
-
-            int shiftAmount = shadowFrequency1 >> currentShift;
-            int calculatedFreq = shadowFrequency1 + (currentDir * shiftAmount);
-
-            // Verificación de Overflow principal
-            if (calculatedFreq > 2047) {
-                channel1On = false; 
-            } 
-            else if (currentShift > 0) {
-                // Aplicar la nueva frecuencia
-                shadowFrequency1 = calculatedFreq;
-                frequency1 = calculatedFreq;
-
-                NR13 = calculatedFreq & 0xFF;
-                NR14 = (NR14 & 0xF8) | ((calculatedFreq >> 8) & 0x07);
-
-                // Súper Quirk: Segunda predicción inmediata
-                int nextShiftAmount = shadowFrequency1 >> currentShift;
-                int nextCalculatedFreq = shadowFrequency1 + (currentDir * nextShiftAmount);
-                if (nextCalculatedFreq > 2047) {
-                    channel1On = false;
-                }
-            }
-        }
-    }
-}
-
 Byte APU::read(Word address) const {
     if (address == 0xFF26) {
         Byte res = 0x70;
@@ -158,12 +106,6 @@ Byte APU::read(Word address) const {
     }
 
     if (address >= 0xFF30 && address <= 0xFF3F) {
-        if (channel3On && (NR30 & 0x80) != 0) {
-            if ((timer3 == 2 || timer3 == 6) && (wavePointer & 1) == 0) {
-                return waveRam[wavePointer / 2];
-            }
-            return 0xFF; 
-        }
         return waveRam[address - 0xFF30];
     }
 
@@ -204,21 +146,10 @@ Byte APU::read(Word address) const {
 }
 
 void APU::write(Word address, Byte value) {
+    //std::cout << "APU WRITE 0x" << std::hex << address << " <- 0x" << (int)value << std::dec << "\n";
     // NR52 (0xFF26) - Control Maestro
-    if (!soundEnabled && address != 0xFF26) {
-        if (address == 0xFF11) { lengthTimer1 = 64 - (value & 0x3F); return; }
-        if (address == 0xFF16) { lengthTimer2 = 64 - (value & 0x3F); return; }
-        if (address == 0xFF1B) { lengthTimer3 = 256 - value; return; }
-        if (address == 0xFF20) { lengthTimer4 = 64 - (value & 0x3F); return; }
-        return;
-    }
     if (address == 0xFF26) {
         bool turningOn = (value & 0x80) != 0;
-
-        if (!soundEnabled && turningOn) {
-            frameSequencerStep = 0;
-        }
-
         if (soundEnabled && !turningOn) {
 
             NR10 = 0; NR11 = 0; NR12 = 0; NR13 = 0; NR14 = 0;
@@ -237,28 +168,13 @@ void APU::write(Word address, Byte value) {
         return; 
     }
     if (address >= 0xFF30 && address <= 0xFF3F) {
-        if (channel3On && (NR30 & 0x80) != 0) {
-            if ((timer3 == 2 || timer3 == 6) && (wavePointer & 1) == 0) {
-                waveRam[wavePointer / 2] = value;
-            }
-            return;
-        }
         waveRam[address - 0xFF30] = value;
         return;
     }
+    if (!soundEnabled) return;
 
     switch (address) {
-        case 0xFF10: {
-            bool wasNegate = (NR10 & 0x08) != 0;
-            bool isNegate = (value & 0x08) != 0;
-            
-            NR10 = value; 
-
-            if (wasNegate && !isNegate && sweepHasCalculatedWithNegate) {
-                channel1On = false;
-            }
-            break;
-        }
+        case 0xFF10: NR10 = value; break;
         case 0xFF11: 
             NR11 = value; 
             lengthTimer1 = 64 - (value & 0x3F);
@@ -274,37 +190,18 @@ void APU::write(Word address, Byte value) {
             // Combinar 8 bits bajos
             frequency1 = (frequency1 & 0x0700) | NR13;
             break;
-        case 0xFF14:{
-            bool wasEnabled = (NR14 & 0x40) != 0;
-            bool isEnabled = (value & 0x40) != 0;
-            bool trigger = (value & 0x80) != 0;
-
+        case 0xFF14: 
             NR14 = value; 
+            // Combinar 3 bits altos (enmascarados con 0x07)
             frequency1 = (frequency1 & 0x00FF) | ((NR14 & 0x07) << 8);
-            lengthEnabled1 = isEnabled;
 
-            bool isFirstHalf = (frameSequencerStep % 2 == 0);
-
-            if (!wasEnabled && isEnabled && !isFirstHalf) {
-                if (lengthTimer1 > 0) {
-                    lengthTimer1--;
-                    if (lengthTimer1 == 0 && !trigger) {
-                        channel1On = false;
-                    }
-                }
-            }
-            
+            lengthEnabled1 = (value & 0x40) != 0;
             
             // --- TRIGGER (Bit 7) ---
-            if (trigger) {
+            if ((value & 0x80) != 0) {
                 channel1On = ((NR12 & 0xF8) != 0);
 
-                if (lengthTimer1 == 0) {
-                    lengthTimer1 = 64;
-                    if (isEnabled && !isFirstHalf) {
-                        lengthTimer1 = 63;
-                    }
-                }
+                if (lengthTimer1 == 0) lengthTimer1 = 64;
 
                 currentVolume1 = (NR12 >> 4) & 0x0F;
                 volume1 = currentVolume1/15.0f; // [0.0,1.0]
@@ -315,7 +212,7 @@ void APU::write(Word address, Byte value) {
                 /*if (envelopePeriod1 != 0) {
                     envelopeTimer1 = envelopePeriod1 * 65536;
                 }*/
-                envelopeTimer1 = envelopePeriod1;
+               envelopeTimer1 = envelopePeriod1;
 
                 // 3. Configurar el Barrido (Sweep) leyendo NR10
                 shadowFrequency1 = frequency1;
@@ -325,30 +222,13 @@ void APU::write(Word address, Byte value) {
                 
                 // Un tick de Sweep ocurre a 128Hz, que equivale a 32,768 ciclos de CPU.
                 // Si el periodo es 0, el manual indica que el temporizador actúa como si fuera 8.
-                //sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 * 32768 : 8 * 32768;
-                sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 : 8;
+                sweepTimer1 = sweepPeriod1 > 0 ? sweepPeriod1 * 32768 : 8 * 32768;
                 sweepEnabled1 = (sweepPeriod1 > 0 || sweepShift1 > 0);
-
-                sweepHasCalculatedWithNegate = false;
-
-                // --- SOLUCIÓN ERROR 2: CÁLCULO DE OVERFLOW EN EL TRIGGER ---
-                if (sweepShift1 > 0) {
-                    if (sweepDirection1 == -1) {
-                        sweepHasCalculatedWithNegate = true;
-                    }
-                    int shiftAmount = shadowFrequency1 >> sweepShift1;
-                    int calculatedFreq = shadowFrequency1 + (sweepDirection1 * shiftAmount);
-                    
-                    // Si el cálculo supera el máximo permitido (2047), el canal muere
-                    if (calculatedFreq > 2047) {
-                        channel1On = false;
-                    }
-                }
-
+                
+                // Calculamos el timer inicial según la fórmula del procesador
                 timer1 = (2048 - frequency1) * 4;
             }
             break;
-        }
         // --- CANAL 2 ---
         case 0xFF16: 
             NR21 = value; 
@@ -364,49 +244,33 @@ void APU::write(Word address, Byte value) {
             NR23 = value; 
             frequency2 = (frequency2 & 0x0700) | NR23;
             break;
-        case 0xFF19:{
-            bool wasEnabled = (NR24 & 0x40) != 0;
-            bool isEnabled = (value & 0x40) != 0;
-            bool trigger = (value & 0x80) != 0;
-
+        case 0xFF19: 
             NR24 = value; 
             frequency2 = (frequency2 & 0x00FF) | ((NR24 & 0x07) << 8);
+
             lengthEnabled2 = (value & 0x40) != 0;
-
-            bool isFirstHalf = (frameSequencerStep % 2 == 0);
-
-            if (!wasEnabled && isEnabled && !isFirstHalf) {
-                if (lengthTimer2 > 0) {
-                    lengthTimer2--;
-                    if (lengthTimer2 == 0 && !trigger) {
-                        channel2On = false;
-                    }
-                }
-            }
-            
             
             // --- TRIGGER CANAL 2 (Bit 7) ---
-            if (trigger) {
+            if ((value & 0x80) != 0) {
                 channel2On = ((NR22 & 0xF8) != 0);
 
-                if (lengthTimer2 == 0) {
-                    lengthTimer2 = 64;
-                    if (isEnabled && !isFirstHalf) {
-                        lengthTimer2 = 63;
-                    }
-                }
+                if (lengthTimer2 == 0) lengthTimer2 = 64;
 
                 currentVolume2 = (NR22 >> 4) & 0x0F; 
                 volume2 = currentVolume2 / 15.0f;    
 
                 envelopeDirection2 = (NR22 & 0x08) != 0 ? 1 : -1;
                 envelopePeriod2 = NR22 & 0x07;
-                envelopeTimer2 = envelopePeriod2;
+
+                /*if (envelopePeriod2 != 0) {
+                    envelopeTimer2 = envelopePeriod2 * 65536;
+                }*/
+               envelopeTimer2 = envelopePeriod2;
                 
                 timer2 = (2048 - frequency2) * 4;
             }
             break;
-        }
+
         case 0xFF1A: 
             NR30 = value; 
             // Si apagan el DAC del Canal 3, se silencia de inmediato
@@ -423,45 +287,24 @@ void APU::write(Word address, Byte value) {
             NR33 = value; 
             frequency3 = (frequency3 & 0x0700) | NR33;
             break;
-        case 0xFF1E:{
-            bool wasEnabled = (NR34 & 0x40) != 0;
-            bool isEnabled = (value & 0x40) != 0;
-            bool trigger = (value & 0x80) != 0;
-
+        case 0xFF1E: 
             NR34 = value; 
             frequency3 = (frequency3 & 0x00FF) | ((NR34 & 0x07) << 8);
             lengthEnabled3 = (value & 0x40) != 0;
 
-            bool isFirstHalf = (frameSequencerStep % 2 == 0);
-
-            // 1. Reloj Extra SÓLO por encender la longitud en la primera mitad
-            if (!wasEnabled && isEnabled && !isFirstHalf) {
-                if (lengthTimer3 > 0) {
-                    lengthTimer3--;
-                    if (lengthTimer3 == 0 && !trigger) {
-                        channel3On = false;
-                    }
-                }
-            }
-
             // --- TRIGGER CANAL 3 (Bit 7) ---
-            if (trigger) {
+            if ((value & 0x80) != 0) {
                 // Validación del DAC del Canal 3
                 channel3On = ((NR30 & 0x80) != 0);
 
-                if (lengthTimer3 == 0) {
-                    lengthTimer3 = 256;
-                    if (isEnabled && !isFirstHalf) {
-                        lengthTimer3 = 255;
-                    }
-                }
+                if (lengthTimer3 == 0) lengthTimer3 = 256;
                 
-                wavePointer = 0;
+                // Reiniciamos el puntero de la muestra
+                wavePointer = 0; 
 
-                timer3 = ((2048 - frequency3) * 2);
+                timer3 = (2048 - frequency3) * 2; 
             }
             break;
-        }
         // --- ESCRITURA CH4 ---
         case 0xFF20: 
             NR41 = value; 
@@ -474,39 +317,15 @@ void APU::write(Word address, Byte value) {
         case 0xFF22: 
             NR43 = value; 
             break;
-        case 0xFF23: {
-            bool wasEnabled = (NR44 & 0x40) != 0;
-            bool isEnabled = (value & 0x40) != 0;
-            bool trigger = (value & 0x80) != 0;
-
+        case 0xFF23: 
             NR44 = value; 
             lengthEnabled4 = (value & 0x40) != 0;
-
-            bool isFirstHalf = (frameSequencerStep % 2 == 0);
-
-            // 1. Reloj Extra SÓLO por encender la longitud en la primera mitad
-            if (!wasEnabled && isEnabled && !isFirstHalf) {
-                if (lengthTimer4 > 0) {
-                    lengthTimer4--;
-                    if (lengthTimer4 == 0 && !trigger) {
-                        channel4On = false;
-                    }
-                }
-            }
-            
             
             // --- TRIGGER CANAL 4 (Bit 7) ---
-            if (trigger) {
+            if ((value & 0x80) != 0) {
                 channel4On = ((NR42 & 0xF8) != 0);
 
-                if (lengthTimer4 == 0) {
-                    lengthTimer4 = 64;
-                    // 2. EL SÚPER QUIRK CORREGIDO:
-                    // Baja a 63 SOLO si está habilitado Y en la primera mitad
-                    if (isEnabled && !isFirstHalf) {
-                        lengthTimer4 = 63;
-                    }
-                }
+                if (lengthTimer4 == 0) lengthTimer4 = 64;
 
                 currentVolume4 = (NR42 >> 4) & 0x0F;
                 volume4 = currentVolume4 / 15.0f;
@@ -529,102 +348,67 @@ void APU::write(Word address, Byte value) {
                 timer4 = divisor << shift;
             }
             break;
-        }
         case 0xFF24: NR50 = value; break;
         case 0xFF25: NR51 = value; break;
     }
-    //if (address == 0xFF26 && (value & 0x80) == 0) {
-    //std::cout << "[NR52] Registros conservados. NR11: 0x" << std::hex << (int)NR11 << "\n";}
 }
 
 void APU::step(int cycles) {
+    if (!soundEnabled) return;
+
+    // ==========================================
+    // 1. ACTUALIZACIÓN DE TEMPORIZADORES (FRECUENCIA)
+    // ==========================================
     
-    if (soundEnabled) {
-        for (int i = 0; i < cycles; ++i) {
-            tick();
-        }
-    }
-
-    runMixer(cycles);
-}
-
-void APU::tick(){
-    tickChannel1();
-    tickChannel2();
-    tickChannel3();
-    tickChannel4();
-    tickFrameSequencer();
-}
-
-void APU::tickChannel1() {
-    timer1--;
+    // Canal 1
+    timer1 -= cycles;
     if (timer1 <= 0) {
-        int reload = (2048 - frequency1) * 4;
-        // Evitamos bucles/timers infinitos por seguridad
-        if (reload == 0) reload = 4; 
-        
-        timer1 += reload;
+        timer1 += (2048 - frequency1) * 4;
         dutyPointer1 = (dutyPointer1 + 1) % 8;
     }
-}
 
-void APU::tickChannel2() {
-    timer2--;
+    // Canal 2
+    timer2 -= cycles;
     if (timer2 <= 0) {
-        int reload = (2048 - frequency2) * 4;
-        if (reload == 0) reload = 4;
-        
-        timer2 += reload;
+        timer2 += (2048 - frequency2) * 4;
         dutyPointer2 = (dutyPointer2 + 1) % 8;
     }
-}
 
-void APU::tickChannel3() {
-    timer3--;
+    timer3 -= cycles;
     if (timer3 <= 0) {
-        int reload = (2048 - frequency3) * 2;
-        if (reload == 0) reload = 2;
-        
-        timer3 += reload;
-        
-        // El avance del puntero de onda
-        wavePointer = (wavePointer + 1) & 31; 
-
-        // EL BUFFER DE MUESTRA (Precisión de hardware):
-        // Solo accedemos a la Wave RAM en los pasos pares.
-        if ((wavePointer & 1) == 0) {
-            sampleBuffer = waveRam[wavePointer / 2];
-        }
+        timer3 += (2048 - frequency3) * 2;
+        wavePointer = (wavePointer + 1) % 32;
     }
-}
 
-void APU::tickChannel4() {
-    timer4--;
+    timer4 -= cycles;
     if (timer4 <= 0) {
         int divisorCode = NR43 & 0x07;
         int shift = (NR43 >> 4) & 0x0F;
         int divisor = (divisorCode == 0) ? 8 : (divisorCode * 16);
-        
-        timer4 += (divisor << shift);
-        // Fallback de seguridad en caso de timer 0
-        if (timer4 <= 0) timer4 = 8; 
+        timer4 += divisor << shift;
 
         // --- ALGORITMO LFSR PARA EL RUIDO ---
+        // Hacemos un XOR entre el Bit 0 y el Bit 1
         int xorBit = (lfsr & 1) ^ ((lfsr >> 1) & 1);
-        lfsr >>= 1; 
+        
+        lfsr >>= 1; // Desplazamos todo a la derecha
+        
+        // Insertamos el resultado en el Bit 14
         lfsr |= (xorBit << 14);
         
+        // Si el Bit 3 de NR43 está encendido, es el "Modo 7 bits" (Hace sonidos más metálicos)
         if ((NR43 & 0x08) != 0) {
-            lfsr &= ~0x40;          
-            lfsr |= (xorBit << 6);  
+            lfsr &= ~0x40;          // Apagamos el Bit 6 temporalmente
+            lfsr |= (xorBit << 6);  // Y le insertamos el resultado
         }
     }
-}
 
-void APU::tickFrameSequencer() {
-    frameSequencerTimer--;
+    // ==========================================
+    // FRAME SEQUENCER (512 Hz)
+    // ==========================================
+    frameSequencerTimer -= cycles;
     if (frameSequencerTimer <= 0) {
-        frameSequencerTimer += 8192;
+        frameSequencerTimer += 8192; // Reiniciamos el reloj
 
         switch (frameSequencerStep) {
             case 0:
@@ -644,7 +428,7 @@ void APU::tickFrameSequencer() {
                 tickLength(lengthEnabled4, lengthTimer4, channel4On);
                 
                 // 128 Hz: Reloj de Barrido (Sweep)
-                tickSweep();
+                // (Aquí irá la lógica del Sweep más adelante)
                 break;
             case 7:
                 // 64 Hz: Reloj de Envolventes de Volumen
@@ -652,14 +436,42 @@ void APU::tickFrameSequencer() {
                 tickEnvelope(envelopePeriod2, envelopeTimer2, currentVolume2, volume2, envelopeDirection2);
                 tickEnvelope(envelopePeriod4, envelopeTimer4, currentVolume4, volume4, envelopeDirection4);
                 break;
+            // Los pasos 1, 3 y 5 no hacen "tic" en ningún componente
         }
         
         // Avanzamos al siguiente paso (0 a 7)
         frameSequencerStep = (frameSequencerStep + 1) % 8;
     }
-}
 
-void APU::runMixer(int cycles) {
+    // ==========================================
+    // 3. ACTUALIZACIÓN DE SWEEP (SOLO CANAL 1)
+    // ==========================================
+    if (sweepTimer1 > 0) {
+        sweepTimer1 -= cycles;
+        if (sweepTimer1 <= 0) {
+            int period = sweepPeriod1 > 0 ? sweepPeriod1 : 8;
+            sweepTimer1 += period * 32768;
+
+            if (sweepEnabled1 && sweepShift1 > 0) {
+                int newFreq = shadowFrequency1 + (sweepDirection1 * (shadowFrequency1 >> sweepShift1));
+                
+                if (newFreq > 2047) {
+                    channel1On = false;
+                } 
+                else if (sweepPeriod1 > 0) {
+                    shadowFrequency1 = newFreq;
+                    frequency1 = newFreq;
+                    NR13 = frequency1 & 0xFF;
+                    NR14 = (NR14 & 0xF8) | ((frequency1 >> 8) & 0x07);
+                }
+            }
+        }
+    }
+    
+
+    // ==========================================
+    // 5. GENERACIÓN Y MEZCLA DE MUESTRAS (MIXER)
+    // ==========================================
     sampleCounter += cycles;
     const int CYCLES_PER_SAMPLE = 4194304 / 44100;
 
@@ -683,47 +495,51 @@ void APU::runMixer(int cycles) {
             sample2 = dutyCycles[dutyIndex2][dutyPointer2] * volume2;
         }
 
-        // Muestra del Canal 3
         if (channel3On && (NR30 & 0x80)) {
-            Byte waveByte = sampleBuffer; 
-            
-            int nibble = (wavePointer % 2 == 0) ? (waveByte >> 4) : (waveByte & 0x0F);
+            Byte waveByte = waveRam[wavePointer/2];
+            int nibble = (wavePointer % 2 == 0) ? (waveByte >> 4):(waveByte & 0x0F);
             int volumeCode = (NR32 >> 5) & 0x03;
             int shiftedNibble = 0;
 
             switch (volumeCode) {
-                case 0: shiftedNibble = 0; break;           
-                case 1: shiftedNibble = nibble; break;      
-                case 2: shiftedNibble = nibble >> 1; break; 
-                case 3: shiftedNibble = nibble >> 2; break; 
+                case 0: shiftedNibble = 0; break;           // Mute (0%)
+                case 1: shiftedNibble = nibble; break;      // 100% (Muestra intacta)
+                case 2: shiftedNibble = nibble >> 1; break; // 50% (Desplazamos 1 bit a la derecha)
+                case 3: shiftedNibble = nibble >> 2; break; // 25% (Desplazamos 2 bits)
             }
 
-            sample3 = (shiftedNibble / 7.5f) - 1.0f;
+            // El nibble va de 0 a 15. Lo normalizamos a un rango de -1.0 a 1.0 para el audio flotante.
+            sample3 = (shiftedNibble/7.5f) - 1.0f;
         }
 
-        // Muestra del Canal 4
         if (channel4On && volume4 > 0.0f) {
+            // Si el bit 0 es 0, la señal es Alta. Si es 1, la señal es Baja.
             sample4 = ((lfsr & 1) == 0 ? 1.0f : -1.0f) * volume4;
         }
 
         // ==========================================
-        // 2.1 DISTRIBUCIÓN ESTÉREO (PANNING - NR51)
+        // 5.1 DISTRIBUCIÓN ESTÉREO (PANNING - NR51)
         // ==========================================
         float leftMix = 0.0f;
         float rightMix = 0.0f;
 
+        // Canal 1
         if (NR51 & 0x10) leftMix += sample1; 
         if (NR51 & 0x01) rightMix += sample1; 
+        // Canal 2
         if (NR51 & 0x20) leftMix += sample2;  
         if (NR51 & 0x02) rightMix += sample2; 
+        // Canal 3
         if (NR51 & 0x40) leftMix += sample3;  
         if (NR51 & 0x04) rightMix += sample3; 
+        // Canal 4
         if (NR51 & 0x80) leftMix += sample4;  
         if (NR51 & 0x08) rightMix += sample4; 
 
         // ==========================================
-        // 2.2 VOLUMEN MAESTRO (FADE-OUT - NR50)
+        // 5.2 VOLUMEN MAESTRO (FADE-OUT - NR50)
         // ==========================================
+        
         float masterLeftVol = ((NR50 >> 4) & 0x07) / 7.0f;  
         float masterRightVol = (NR50 & 0x07) / 7.0f;
 
@@ -735,7 +551,7 @@ void APU::runMixer(int cycles) {
     }
 
     // ==========================================
-    // 3. ENVÍO A SDL2
+    // 6. ENVÍO A SDL2
     // ==========================================
     if (audioBuffer.size() >= 1024) {
         const Uint32 MAX_AUDIO_QUEUE_BYTES = 16384;
@@ -745,4 +561,3 @@ void APU::runMixer(int cycles) {
         audioBuffer.clear();
     }
 }
-
