@@ -140,6 +140,8 @@ private:
     void tickChannel3();
     void tickChannel4();
     void tickFrameSequencer();
+    
+    int waveAccessWindow = 0;
 
 public:
     APU();
