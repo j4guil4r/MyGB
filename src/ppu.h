@@ -54,6 +54,16 @@ public:
 
     void updateStatInterrupt();
 
+    enum class PPUMode {
+        HBlank = 0,
+        VBlank = 1,
+        OAM = 2,
+        Transfer = 3
+    };
+
+    PPUMode currentMode = PPUMode::OAM;
+
+    void triggerOamBug(Word address);
 private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
     void drawScanline();
@@ -65,14 +75,9 @@ private:
     inline Byte readVRAM(Word addr);
     uint32_t getTilePixelColor(Byte tileNumber, Word tileDataBase, Byte line, Byte xPixel, Byte paletteReg);
 
-    enum class PPUMode {
-        HBlank = 0,
-        VBlank = 1,
-        OAM = 2,
-        Transfer = 3
-    };
-
-    PPUMode currentMode = PPUMode::OAM;
-
     bool prevStatLine = false;
+    
+    int turnOnDelay = 0;
+
+    void corruptOAM();
 };

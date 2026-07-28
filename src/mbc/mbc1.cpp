@@ -4,18 +4,30 @@ MBC1::MBC1(const std::vector<Byte>& romData, std::vector<Byte>& ramData):
     MBC(romData, ramData), ramEnabled(false), bankingMode(false), currentROMBank(1), currentRAMBank(0) {}
 
 Byte MBC1::read(Word address) const {
-    // 1. ROM Bank 00 (Fijo - 0x0000 a 0x3FFF)
+    // Calculamos los bancos físicos reales del archivo (Ej. 64KB = 4 bancos)
+    size_t totalRomBanks = rom.size() / 0x4000;
+    if (totalRomBanks == 0) totalRomBanks = 1; // Seguridad paranoica
+
+    // 1. ROM Bank 00 (Fijo/Espejo - 0x0000 a 0x3FFF)
     if (address <= 0x3FFF) {
-        return rom[address];
+        Byte zeroBank = 0;
+        // En MBC1, si bankingMode es 1, el Banco 0 cambia usando la RAM
+        if (bankingMode == 1) {
+            zeroBank = (currentRAMBank << 5);
+        }
+        zeroBank = zeroBank % totalRomBanks; // Wrap-around por hardware
+        return rom[(zeroBank * 0x4000) + address];
     }
     
     // 2. ROM Bank 01-7F (Intercambiable - 0x4000 a 0x7FFF)
     if (address >= 0x4000 && address <= 0x7FFF) {
         Word offset = address - 0x4000;
-        uint32_t targetAddress = (currentROMBank * 0x4000) + offset;
         
-        if (targetAddress < rom.size()) return rom[targetAddress];
-        return 0xFF;
+        // ¡LA MAGIA DEL HARDWARE! Forzamos el espejo en lugar de devolver 0xFF
+        Byte romBankToUse = currentROMBank % totalRomBanks;
+        
+        uint32_t targetAddress = (romBankToUse * 0x4000) + offset;
+        return rom[targetAddress];
     }
 
     // 3. RAM Externa (0xA000 a 0xBFFF)
@@ -24,12 +36,11 @@ Byte MBC1::read(Word address) const {
         
         Word offset = address - 0xA000;
         
-        // En MBC1, si bankingMode es 0 (Modo ROM), solo se puede acceder al Banco RAM 0.
         Byte ramBankToUse = bankingMode ? currentRAMBank : 0;
         uint32_t targetAddress = (ramBankToUse * 0x2000) + offset;
         
         if (targetAddress < externalRAM.size()) return externalRAM[targetAddress];
-        return 0xFF;
+        return 0xFF; // Aquí sí es válido devolver 0xFF si excede la RAM
     }
 
     return 0xFF;

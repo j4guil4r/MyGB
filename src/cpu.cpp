@@ -576,7 +576,11 @@ void CPU::reset() {
 // FETCH
 Byte CPU::fetchByte() {
     Byte data = read(PC);
-    PC++;
+    if (haltBug) {
+        haltBug = false; 
+    } else {
+        PC++;
+    }
     return data;
 }
 
@@ -647,15 +651,9 @@ void CPU::set(int bitIndex, Byte& regVal) {
 }
 
 void CPU::sub(Byte value) {
-    // 1. Validar Carry (Borrow) antes de restar
-    // Si A es menor que value, necesitaremos un "préstamo", así que Carry = true
     setFlag(F_C, A < value);
-
-    // 2. Validar Half-Carry (Borrow del nibble bajo)
-    // ((A & 0xF) - (value & 0xF)) < 0
     setFlag(F_H, (A & 0x0F) < (value & 0x0F));
 
-    // 3. Realizar la resta
     A -= value;
 
     setFlag(F_Z, A == 0);
@@ -663,27 +661,30 @@ void CPU::sub(Byte value) {
 }
 
 void CPU::pushStack(Word value) {
+    Word old;
     tick();
-
-    // 1. High Byte
+    old = SP;
     SP--;
+    bus.ppu.triggerOamBug(old);
     write(SP, (value >> 8) & 0xFF);
 
-    // 2. Low Byte
+    old = SP;
     SP--;
+    bus.ppu.triggerOamBug(old);
     write(SP, value & 0xFF);
 }
 
 Word CPU::popStack() {
-    // 1. Leemos el Byte BAJO primero (porque el Stack es LIFO - Last In First Out)
+    Word old;
     Byte lo = read(SP);
+    old = SP;
     SP++;
-
-    // 2. Leemos el Byte ALTO
+    bus.ppu.triggerOamBug(old);
     Byte hi = read(SP);
+    old = SP;
     SP++;
+    bus.ppu.triggerOamBug(old);
 
-    // 3. Combinamos
     return (hi << 8) | lo;
 }
 
@@ -1011,7 +1012,12 @@ void CPU::OP_UNKNOWN() {
 void CPU::OP_NOP() {}
 void CPU::OP_LD_BC_d16() { setBC(fetchWord()); }
 void CPU::OP_LD_BC_A()   { write(getBC(), A);}
-void CPU::OP_INC_BC()    { tick(); setBC(getBC() + 1);}
+void CPU::OP_INC_BC()    {
+    tick();
+    Word old = getBC();
+    setBC(getBC() + 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_B()     { inc(B); }
 void CPU::OP_DEC_B()     { dec(B); }
 void CPU::OP_LD_B_d8()   { B = fetchByte(); }
@@ -1023,7 +1029,12 @@ void CPU::OP_LD_a16_SP() {
 }
 void CPU::OP_ADD_HL_BC() { tick(); addHL(getBC()); }
 void CPU::OP_LD_A_BC()   { A = read(getBC()); }
-void CPU::OP_DEC_BC()    { tick(); setBC(getBC() - 1); }
+void CPU::OP_DEC_BC()    { 
+    tick();
+    Word old = getBC();
+    setBC(getBC() - 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_C()     { inc(C); }
 void CPU::OP_DEC_C()     { dec(C); }
 void CPU::OP_LD_C_d8()   { C = fetchByte(); }
@@ -1039,7 +1050,12 @@ void CPU::OP_STOP()      {
 }
 void CPU::OP_LD_DE_d16() { setDE(fetchWord()); }
 void CPU::OP_LD_DE_A()   { write(getDE(), A); }
-void CPU::OP_INC_DE()    { tick(); setDE(getDE() + 1); }
+void CPU::OP_INC_DE()    { 
+    tick();
+    Word old = getDE();
+    setDE(getDE() + 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_D()     { inc(D); }
 void CPU::OP_DEC_D()     { dec(D); }
 void CPU::OP_LD_D_d8()   { D = fetchByte(); }
@@ -1054,7 +1070,12 @@ void CPU::OP_JR_r8()     {
 }
 void CPU::OP_ADD_HL_DE() { tick(); addHL(getDE()); }
 void CPU::OP_LD_A_DE()   { A = read(getDE()); }
-void CPU::OP_DEC_DE()    { tick(); setDE(getDE() - 1); }
+void CPU::OP_DEC_DE()    { 
+    tick();
+    Word old = getDE();
+    setDE(old - 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_E()     { inc(E); }
 void CPU::OP_DEC_E()     { dec(E); }
 void CPU::OP_LD_E_d8()   { E = fetchByte(); }
@@ -1077,9 +1098,16 @@ void CPU::OP_JR_NZ_r8()  {
 void CPU::OP_LD_HL_d16() { setHL(fetchWord()); }
 void CPU::OP_LDI_HL_A() {
     write(getHL(), A);
-    setHL(getHL() + 1);
+    Word old = getHL();
+    setHL(old + 1);
+    bus.ppu.triggerOamBug(old);
 }
-void CPU::OP_INC_HL()    { tick(); setHL(getHL() + 1); }
+void CPU::OP_INC_HL()    {
+    tick();
+    Word old = getHL();
+    setHL(old + 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_H()     { inc(H); }
 void CPU::OP_DEC_H()     { dec(H); }
 void CPU::OP_LD_H_d8()   { H = fetchByte(); }
@@ -1095,9 +1123,17 @@ void CPU::OP_JR_Z_r8() {
 void CPU::OP_ADD_HL_HL() { tick(); addHL(getHL()); }
 void CPU::OP_LDI_A_HL()  {
     A = read(getHL());
-    setHL(getHL() + 1); // HL++
+    Word old = getHL();
+    setHL(old + 1);
+    bus.ppu.triggerOamBug(old);
+    
 }
-void CPU::OP_DEC_HL()    { tick(); setHL(getHL() - 1); }
+void CPU::OP_DEC_HL()    {
+    tick();
+    Word old = getHL();
+    setHL(old - 1);
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_L()     { inc(L);}
 void CPU::OP_DEC_L()     { dec(L); }
 void CPU::OP_LD_L_d8()   { L = fetchByte(); }
@@ -1121,9 +1157,16 @@ void CPU::OP_JR_NC_r8() {
 void CPU::OP_LD_SP_d16() { SP = fetchWord(); }
 void CPU::OP_LDD_HL_A() {
     write(getHL(), A);
-    setHL(getHL() - 1);
+    Word old = getHL();
+    setHL(old - 1);
+    bus.ppu.triggerOamBug(old);
 }
-void CPU::OP_INC_SP()    { tick(); SP++; }
+void CPU::OP_INC_SP()    {
+    tick();
+    Word old = SP;
+    SP++;
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_aHL() {
     Byte val = read(getHL());
     inc(val);
@@ -1155,9 +1198,16 @@ void CPU::OP_JR_C_r8() {
 void CPU::OP_ADD_HL_SP() { tick(); addHL(SP); }
 void CPU::OP_LDD_A_HL() {
     A = read(getHL());
-    setHL(getHL() - 1);
+    Word old = getHL();
+    setHL(old - 1);
+    bus.ppu.triggerOamBug(old);
 }
-void CPU::OP_DEC_SP()    { tick(); SP--; }
+void CPU::OP_DEC_SP()    {
+    tick();
+    Word old = SP;
+    SP--;
+    bus.ppu.triggerOamBug(old);
+}
 void CPU::OP_INC_A()     { inc(A); }
 void CPU::OP_DEC_A()     { dec(A); }
 void CPU::OP_LD_A_d8()   { A = fetchByte(); }
@@ -1236,17 +1286,16 @@ void CPU::OP_LD_aHL_D() { write(getHL(), D);}
 void CPU::OP_LD_aHL_E() { write(getHL(), E);}
 void CPU::OP_LD_aHL_H() { write(getHL(), H);}
 void CPU::OP_LD_aHL_L() { write(getHL(), L);}
-void CPU::OP_HALT()     {            
-    // Leemos IE e IF para ver si ya hay una interrupción pendiente
+void CPU::OP_HALT()     {
     Byte IE = bus.read(0xFFFF);
     Byte IF = bus.read(0xFF0F);
 
     // Si hay una interrupción pendiente (y habilitada en IE),
     // HALT no surte efecto (bug del hardware, o simplemente no se duerme).
     if ((IE & IF & 0x1F) != 0) {
-        // HALT Bug: En hardware real, esto causa que la siguiente
-        // instrucción se lea dos veces. Para emulación simple,
-        // basta con NO activar isHalted.
+        if (!ime) {
+            haltBug = true; 
+        }
     } else {
         // Si no hay nada pendiente, a dormir.
         isHalted = true;

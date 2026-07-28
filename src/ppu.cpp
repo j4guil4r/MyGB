@@ -1,4 +1,6 @@
 #include "ppu.h"
+#include <stdio.h>
+#include <cmath>
 
 constexpr uint32_t GB_COLOR_0 = 0xFFFFFFFF;  // Blanco
 constexpr uint32_t GB_COLOR_1 = 0xFFAAAAAA;  // Gris claro
@@ -314,9 +316,27 @@ void PPU::write(Word address, Byte value) {
     if (address >= 0xFE00 && address <= 0xFE9F) { oam[address - 0xFE00] = value; return; }
     
     switch (address) {
-        case 0xFF40: lcdc = value; break;
+        case 0xFF40: {
+            bool wasOn = (lcdc & 0x80) != 0;
+            bool isOn = (value & 0x80) != 0;
+
+            if (!wasOn && isOn) {
+                dots = 0;
+                ly = 0;
+                currentMode = PPUMode::OAM;
+                setMode(static_cast<Byte>(currentMode));
+                updateStatInterrupt();
+            } else if (wasOn && !isOn) {
+                dots = 0;
+                ly = 0;
+                currentMode = PPUMode::HBlank;
+                stat = (stat & ~0x03);
+            }
+            lcdc = value; 
+            break;
+        }
         case 0xFF41: 
-            stat = (value & 0xF8) | (stat & 0x07); 
+            stat = (value & 0xF8) | (stat & 0x07) | 0x80; 
             updateStatInterrupt();
             break;
         case 0xFF42: scy = value; break;
@@ -336,23 +356,46 @@ void PPU::write(Word address, Byte value) {
 }
 
 void PPU::updateStatInterrupt() {
-    // 1. Calcular el bit LY==LYC (Bit 2)
     if (ly == lyc) {
         stat |= 0x04;
     } else {
         stat &= ~0x04;
     }
 
-    // 2. Evaluar si se debe disparar la interrupción
     bool currentStatLine = false;
     if ((stat & 0x40) && (stat & 0x04)) currentStatLine = true; // LY==LYC
     if ((stat & 0x20) && currentMode == PPUMode::OAM) currentStatLine = true;
     if ((stat & 0x10) && currentMode == PPUMode::VBlank) currentStatLine = true;
     if ((stat & 0x08) && currentMode == PPUMode::HBlank) currentStatLine = true;
 
-    // 3. Disparar (con el flanco que ya tienes)
     if (currentStatLine && !prevStatLine) {
         requestStatInterrupt = true;
     }
     prevStatLine = currentStatLine;
+}
+
+void PPU::triggerOamBug(Word address) {
+    if (currentMode == PPUMode::OAM && dots < 76 && address >= 0xFE00 && address <= 0xFEFF) {
+        corruptOAM();
+    }
+}
+
+void PPU::corruptOAM() {
+    int row = dots / 4;
+    if (row < 0 || row >= 20) return;
+    int base = row * 8;
+
+    Byte b0 = oam[base + 0];
+    Byte b1 = oam[base + 1];
+    Byte b2 = oam[base + 2];
+    Byte b3 = oam[base + 3];
+
+    oam[base + 0] = b0;
+    oam[base + 1] = b1;
+    oam[base + 2] = b0;
+    oam[base + 3] = b1;
+    oam[base + 4] = b2;
+    oam[base + 5] = b3;
+    oam[base + 6] = b0;
+    oam[base + 7] = b1;
 }

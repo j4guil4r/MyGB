@@ -74,12 +74,8 @@ public:
         return ((currentDiv >> bit) & 1) && enable;
     }
 
-    // Lo usaremos para que el Timer le diga a la CPU "¡Oye!"
     void requestInterrupt(int bit);
-
-    Byte ly = 0; // 0xFF44 - LCD Y Coordinate
-    long long ppuCounter = 0; // Para simular el dibujo de líneas
-
+    
     // --- JOYPAD ---
     // Inicializamos todo en 0x0F (puros 1s en los 4 bits bajos = nada presionado)
     Byte joypadDir = 0x0F;    // Flechas: Abajo(3), Arriba(2), Izquierda(1), Derecha(0)

@@ -71,6 +71,7 @@ private:
     int imeDelay = 0;
     bool isHalted = false;
     bool isStopped = false;
+    bool haltBug = false;
 
     // ============= HELPERS ===============//
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
