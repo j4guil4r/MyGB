@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <vector>
 #include <chrono>
+#include <algorithm>
 #include "../src/bus.h"
 #include "../src/cpu.h"
 
@@ -97,23 +98,53 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
     }
 }
 
-int main () {
-    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms";
-    std::vector<std::string> testFiles;
-
-    for (const auto& entry : fs::recursive_directory_iterator(baseDirectory)) {
-        if (entry.path().string().find("oam_bug") != std::string::npos) continue;
-        if (entry.is_regular_file() && entry.path().extension() == ".gb") {
-            std::string parentDir = entry.path().parent_path().filename().string();
-            if (parentDir == "individual" || parentDir == "rom_singles") {
-                //if(entry.path().filename() == "7-timing_effect.gb") 
-                    testFiles.push_back(entry.path().string());
-            }
-        }
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "=== MyGB Test Runner (Blargg Suites) ===\n";
+        std::cout << "Uso: " << argv[0] << " <ruta_a_rom.gb | ruta_a_directorio>\n\n";
+        std::cout << "Comportamiento:\n";
+        std::cout << "  - Si recibe un archivo .gb: ejecuta únicamente ese test.\n";
+        std::cout << "  - Si recibe un directorio: busca recursivamente y ejecuta todas las ROMs .gb dentro.\n\n";
+        std::cout << "Ejemplos:\n";
+        std::cout << "  " << argv[0] << " build/gb-test-roms/cpu_instrs/individual/01-special.gb\n";
+        std::cout << "  " << argv[0] << " build/gb-test-roms/cpu_instrs/individual/\n";
+        return 0;
     }
 
-    std::cout << "Iniciando batería de pruebas Blargg...\n";
-    std::cout << "Se encontraron " << testFiles.size() << " tests individuales.\n\n";
+    fs::path targetPath(argv[1]);
+
+    if (!fs::exists(targetPath)) {
+        std::cerr << "Error: La ruta especificada no existe: " << targetPath.string() << "\n";
+        return 1;
+    }
+
+    std::vector<std::string> testFiles;
+
+    if (fs::is_regular_file(targetPath)) {
+        if (targetPath.extension() == ".gb") {
+            testFiles.push_back(targetPath.string());
+        } else {
+            std::cerr << "Error: El archivo especificado no tiene extensión .gb: " << targetPath.string() << "\n";
+            return 1;
+        }
+    } else if (fs::is_directory(targetPath)) {
+        for (const auto& entry : fs::recursive_directory_iterator(targetPath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".gb") {
+                testFiles.push_back(entry.path().string());
+            }
+        }
+        std::sort(testFiles.begin(), testFiles.end());
+    } else {
+        std::cerr << "Error: La ruta no es un archivo ni un directorio válido: " << targetPath.string() << "\n";
+        return 1;
+    }
+
+    if (testFiles.empty()) {
+        std::cout << "No se encontraron archivos .gb en: " << targetPath.string() << "\n";
+        return 0;
+    }
+
+    std::cout << "Iniciando batería de pruebas (" << testFiles.size() << " test(s) encontrado(s))...\n\n";
 
     for (const std::string& filepath : testFiles) {
         fs::path pathObj(filepath);
@@ -123,7 +154,7 @@ int main () {
         
         auto fin = std::chrono::high_resolution_clock::now();
         auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
-        std::cout << pathObj.filename().string() << " terminó en " << duracion.count() << " ms\n";
+        std::cout << pathObj.filename().string() << " terminó en " << duracion.count() << " ms\n\n";
     }
 
     return 0;

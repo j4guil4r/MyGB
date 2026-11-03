@@ -3,6 +3,10 @@
 UI::UI(){}
 
 UI::~UI(){
+    if (audioDevice != 0) {
+        SDL_CloseAudioDevice(audioDevice);
+        audioDevice = 0;
+    }
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -10,7 +14,7 @@ UI::~UI(){
 }
 
 bool UI::init(int width, int height, int scale) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         std::cerr << "Error al inicializar SDL: " << SDL_GetError() << "\n";
         return false;
     }
@@ -34,6 +38,24 @@ bool UI::init(int width, int height, int scale) {
         std::cerr << "Error creando la ventana/renderizador: " << SDL_GetError() << "\n";
         SDL_Quit();
         return false;
+    }
+
+    // --- CONFIGURACIÓN DE AUDIO SDL ---
+    SDL_AudioSpec desiredSpec;
+    SDL_zero(desiredSpec);
+    desiredSpec.freq = 44100;
+    desiredSpec.format = AUDIO_F32SYS;
+    desiredSpec.channels = 2;
+    desiredSpec.samples = 1024;
+    desiredSpec.callback = nullptr;
+
+    SDL_AudioSpec obtainedSpec;
+    audioDevice = SDL_OpenAudioDevice(nullptr, 0, &desiredSpec, &obtainedSpec, 0);
+
+    if (audioDevice == 0) {
+        std::cerr << "Advertencia: No se pudo abrir dispositivo de audio SDL: " << SDL_GetError() << "\n";
+    } else {
+        SDL_PauseAudioDevice(audioDevice, 0);
     }
 
     return true;
@@ -96,5 +118,24 @@ void UI::render(Bus& gbBus) {
         SDL_UpdateTexture(texture, nullptr, gbBus.ppu.framebuffer.data(), GB_WIDTH * sizeof(uint32_t));
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
         SDL_RenderPresent(renderer);
+    }
+}
+
+void UI::syncAudio(Bus& gbBus) {
+    if (audioDevice == 0) return;
+
+    const Uint32 MAX_AUDIO_QUEUE_BYTES = 16384;
+    Uint32 queued = SDL_GetQueuedAudioSize(audioDevice);
+    
+    float tempBuffer[2048];
+    while (gbBus.apu.getAvailableAudioSamples() > 0) {
+        size_t available = gbBus.apu.getAvailableAudioSamples();
+        size_t toRead = std::min(available, sizeof(tempBuffer) / sizeof(tempBuffer[0]));
+        size_t readCount = gbBus.apu.readAudioSamples(tempBuffer, toRead);
+
+        if (readCount > 0 && queued < MAX_AUDIO_QUEUE_BYTES) {
+            SDL_QueueAudio(audioDevice, tempBuffer, static_cast<Uint32>(readCount * sizeof(float)));
+            queued += static_cast<Uint32>(readCount * sizeof(float));
+        }
     }
 }

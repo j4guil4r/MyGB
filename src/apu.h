@@ -1,11 +1,12 @@
 #pragma once
 #include "types.h"
 #include <vector>
-#include <SDL2/SDL.h>
+#include <cstddef>
 
 class APU{
 private:
     std::vector<float> audioBuffer;
+    static constexpr size_t MAX_AUDIO_BUFFER_SAMPLES = 16384;
     bool soundEnabled;
 
     // --- CANAL 1: Onda Cuadrada con Barrido ---
@@ -153,4 +154,8 @@ public:
 
     void step(int cycles);
     void runMixer(int cycles);
+
+    size_t readAudioSamples(float* destination, size_t count);
+    [[nodiscard]] size_t getAvailableAudioSamples() const;
+    void clearAudioBuffer();
 };

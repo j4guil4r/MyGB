@@ -56,6 +56,8 @@ int main(int argc, char* argv[]) {
             gbBus.ppu.frameReady = false; 
         }
 
+        ui.syncAudio(gbBus);
+
         int frameTime = static_cast<int>(SDL_GetTicks() - frameStart);
 
         if (frameTime < TARGET_FRAME_TIME) {

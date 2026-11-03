@@ -1,7 +1,6 @@
 #include "apu.h"
 #include <iostream>
-
-static SDL_AudioDeviceID audioDevice = 0;
+#include <algorithm>
 
 APU::APU(){
     soundEnabled = true;
@@ -38,38 +37,9 @@ APU::APU(){
     lengthTimer1 = 0;
     lengthEnabled1 = false;
     lengthCounterTick1 = 0;
-
-    if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
-        std::cerr << "Error crítico: No se pudo inicializar el subsistema de audio SDL: " << SDL_GetError() << "\n";
-    }
-
-    // --- CONFIGURACIÓN DE SDL AUDIO ---
-    SDL_AudioSpec desiredSpec;
-    SDL_zero(desiredSpec);
-    desiredSpec.freq = 44100;
-    desiredSpec.format = AUDIO_F32SYS;
-    desiredSpec.channels = 2;
-    desiredSpec.samples = 1024;
-    desiredSpec.callback = nullptr;
-
-    SDL_AudioSpec obtainedSpec;
-    audioDevice = SDL_OpenAudioDevice(nullptr, 0, &desiredSpec, &obtainedSpec, 0);
-
-    if (audioDevice == 0){
-        std::cerr << "Error al inicializar SDL Audio: " << SDL_GetError() << "\n";
-    }
-    else {
-        SDL_PauseAudioDevice(audioDevice, 0);
-    }
-
 }
 
-APU::~APU() {
-    if (audioDevice != 0) {
-        SDL_CloseAudioDevice(audioDevice);
-    }
-    SDL_QuitSubSystem(SDL_INIT_AUDIO);
-}
+APU::~APU() = default;
 
 void APU::resetSequencerPhase() {
     frameSequencerTimer = 8192;
@@ -727,17 +697,29 @@ void APU::runMixer(int cycles) {
 
         audioBuffer.push_back(finalLeft);
         audioBuffer.push_back(finalRight);
-    }
 
-    // ==========================================
-    // 3. ENVÍO A SDL2
-    // ==========================================
-    if (audioBuffer.size() >= 1024) {
-        const Uint32 MAX_AUDIO_QUEUE_BYTES = 16384;
-        if (SDL_GetQueuedAudioSize(audioDevice) < MAX_AUDIO_QUEUE_BYTES) {
-            SDL_QueueAudio(audioDevice, audioBuffer.data(), audioBuffer.size() * sizeof(float));
+        // Prevenir crecimiento descontrolado si no hay consumidor activo (ej. durante tests)
+        if (audioBuffer.size() > MAX_AUDIO_BUFFER_SAMPLES) {
+            audioBuffer.erase(audioBuffer.begin(), audioBuffer.begin() + 1024);
         }
-        audioBuffer.clear();
     }
+}
+
+size_t APU::readAudioSamples(float* destination, size_t count) {
+    if (!destination || count == 0 || audioBuffer.empty()) {
+        return 0;
+    }
+    size_t samplesToRead = std::min(count, audioBuffer.size());
+    std::copy(audioBuffer.begin(), audioBuffer.begin() + samplesToRead, destination);
+    audioBuffer.erase(audioBuffer.begin(), audioBuffer.begin() + samplesToRead);
+    return samplesToRead;
+}
+
+size_t APU::getAvailableAudioSamples() const {
+    return audioBuffer.size();
+}
+
+void APU::clearAudioBuffer() {
+    audioBuffer.clear();
 }
 

@@ -9,6 +9,7 @@ private:
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
+    SDL_AudioDeviceID audioDevice = 0;
     bool running = true;
 
 public:
@@ -18,5 +19,6 @@ public:
     bool init(int width, int height, int scale);
     void handleEvents(Bus& gbBus);
     void render(Bus& bus);
+    void syncAudio(Bus& gbBus);
     bool isRunning() const { return running; }
 };
