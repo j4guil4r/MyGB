@@ -21,7 +21,6 @@ void Cartridge::loadBattery(){
     std::ifstream file(saveFilepath, std::ios::binary);
     if (file.is_open()) {
         file.read(reinterpret_cast<char*>(externalRAM.data()), externalRAM.size());
-        std::cout << "-> Bateria cargada exitosamente: " << saveFilepath << "\n";
     }
     else {
         std::cout << "-> No se encontro archivo de guardado previo. Se iniciara una partida nueva.\n";
@@ -34,7 +33,6 @@ void Cartridge::saveBattery() {
     std::ofstream file(saveFilepath, std::ios::binary | std::ios::trunc);
     if (file.is_open()) {
         file.write(reinterpret_cast<const char*>(externalRAM.data()), externalRAM.size());
-        std::cout << "-> Partida guardada en: " << saveFilepath << "\n";
     }
 }
 

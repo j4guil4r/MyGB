@@ -10,11 +10,12 @@ Bus::Bus() {
 }
 
 
-
-// EL MAPA DE MEMORIA (LECTURA)
 Byte Bus::read(Word addr) const {
     if (addr == 0xFF01) {
         return serialData;
+    }
+    if (addr == 0xFF02) {
+        return 0x00;
     }
     // 1. ROM (0000 - 7FFF)
     if (addr < 0x8000) {
@@ -85,10 +86,6 @@ Byte Bus::read(Word addr) const {
         if (addr == 0xFF06) return tma;
         if (addr == 0xFF07) return tac;
 
-        // XDDDD
-        // Serial (Para debug, opcional en lectura)
-        //if (addr == 0xFF01) return 0;
-
         return 0;
     }
 
@@ -104,22 +101,21 @@ Byte Bus::read(Word addr) const {
     return 0xFF;
 }
 
-// EL MAPA DE MEMORIA (ESCRITURA)
 void Bus::write(Word addr, Byte data) {
     // --- PUERTO SERIAL ---
     if (addr == 0xFF01) {
         serialData = data;
-        // Puede que tengas que hacer return aquí si tu diseño lo requiere, 
-        // o dejar que se guarde en tu arreglo de memoria genérico.
         auto c = static_cast<char>(data);
         serialOutput += c;
+        return;
     }
     else if (addr == 0xFF02) {
         // Interceptor de Blargg
         if (data == 0x81) {
             std::cout << (char)serialData << std::flush;
+            data &= 0x7F;
         }
-        // Guardas el valor de control si tienes una variable para él
+        return;
     }
 
     // 1. ROM
@@ -141,6 +137,7 @@ void Bus::write(Word addr, Byte data) {
     // 3. WRAM
     else if (addr >= 0xC000 && addr <= 0xDFFF) {
         wram[addr - 0xC000] = data;
+        return;
     }
     // 4. OAM
     else if (addr >= 0xFE00 && addr <= 0xFE9F) {
@@ -185,12 +182,6 @@ void Bus::write(Word addr, Byte data) {
             return;
         }
 
-        // Serial Output (Debug Blargg)
-        //if (addr == 0xFF01) {
-        //    auto c = static_cast<char>(data);
-        //    serialOutput += c;
-        //}
-
         // Timers
         else if (addr == 0xFF04) { 
             bool oldEdge = getTimerEdge(internalDiv, tac);
@@ -227,80 +218,35 @@ void Bus::write(Word addr, Byte data) {
     // 6. HRAM
     else if (addr >= 0xFF80 && addr <= 0xFFFE) {
         hram[addr - 0xFF80] = data;
+        return;
     }
     // 7. IE Register
     else if (addr == 0xFFFF) {
         ieRegister = data;
+        return;
     }
 }
 void Bus::requestInterrupt(int bit) {
-    // Debug: Chivatear si es el Timer (Bit 2)
-    /*if (bit == 2) {
-        std::cout << "[INT] TIMER FIRED!\n";
-    }*/
-    // bit 0: VBlank, bit 1: LCD, bit 2: Timer, etc.
     ifRegister |= (1 << bit);
 }
 
 void Bus::updateTimers(const long long cycles) {
-  /*  // 1. DIV (Divider Register)
-    // Incrementa siempre, a una velocidad de 16384 Hz.
-    // La CPU va a 4194304 Hz. 4194304 / 16384 = 256 ciclos de CPU por cada tick de DIV.
-    divCounter += cycles;
-    if (divCounter >= 256) {
-        div++;
-        divCounter -= 256;
-    }
-
-    // 2. TIMA (Timer Counter)
-    // Solo funciona si el bit 2 de TAC está encendido
-    if ((tac & 0x04) != 0) {
-        timerCounter += cycles;
-
-        // Determinar frecuencia según TAC (bits 0-1)
-        // 00: 4096 Hz (1024 ciclos)
-        // 01: 262144 Hz (16 ciclos)
-        // 10: 65536 Hz (64 ciclos)
-        // 11: 16384 Hz (256 ciclos)
-        int threshold = 0;
-        switch (tac & 0x03) {
-            case 0: threshold = 1024; break;
-            case 1: threshold = 16; break;
-            case 2: threshold = 64; break;
-            case 3: threshold = 256; break;
-        }
-
-        while (timerCounter >= threshold) {
-            timerCounter -= threshold;
-
-            // Incrementamos TIMA
-            if (tima == 0xFF) {
-                tima = tma; // Recargamos con el valor de TMA
-                requestInterrupt(2); // Pedimos Interrupción de Timer (Bit 2)
-            } else {
-                tima++;
-            }
-        }
-    }*/
-
-    // 1. Procesamos cualquier recarga pendiente
     if (timaOverflowDelay > 0) {
         timaOverflowDelay -= cycles;
         if (timaOverflowDelay <= 0) {
-            tima = tma; // Por fin cargamos TMA
-            requestInterrupt(2); // Pedimos la interrupción
+            tima = tma;
+            requestInterrupt(2);
         }
     }
 
-    // 2. Lógica del Falling Edge
     bool oldEdge = getTimerEdge(internalDiv, tac);
     internalDiv += cycles;
     bool newEdge = getTimerEdge(internalDiv, tac);
 
     if (oldEdge && !newEdge) {
         if (tima == 0xFF) {
-            tima = 0x00; // TIMA se vuelve 0 temporalmente
-            timaOverflowDelay = 4; // Retraso de 1 M-cycle (4 T-cycles)
+            tima = 0x00;
+            timaOverflowDelay = 4;
         } else {
             tima++;
         }

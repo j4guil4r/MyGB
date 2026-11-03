@@ -23,7 +23,7 @@ public:
     void write(Word addr, Byte data);
 
     std::string getSerialOutput () const;
-    void clearSerialOutput() { serialOutput = ""; }
+    //void clearSerialOutput() { serialOutput = ""; }
 
     // --- MEMORIAS INTERNAS ---
 

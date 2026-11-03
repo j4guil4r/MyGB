@@ -1,7 +1,7 @@
 #include "ppu.h"
 #include <stdio.h>
 #include <cmath>
-
+#include <iostream>
 constexpr uint32_t GB_COLOR_0 = 0xFFFFFFFF;  // Blanco
 constexpr uint32_t GB_COLOR_1 = 0xFFAAAAAA;  // Gris claro
 constexpr uint32_t GB_COLOR_2 = 0xFF555555;  // Gris oscuro
@@ -228,26 +228,25 @@ void PPU::drawWindow() {
 
 
 void PPU::step(int cycles) {
-    // Si la pantalla está apagada 
     if (!(lcdc & 0x80)) {
         dots = 0;
         ly = 0;
         currentMode = PPUMode::HBlank;
-        stat = (stat & ~0x03); // Modo 0 en STAT de forma segura
+        stat = (stat & ~0x03);
         return;
     }
 
     dots += cycles;
 
     switch (currentMode) {
-        case PPUMode::OAM: // Modo 2
+        case PPUMode::OAM:
             if (dots >= 80) {
                 dots -= 80;
                 currentMode = PPUMode::Transfer;
             }
             break;
 
-        case PPUMode::Transfer: // Modo 3
+        case PPUMode::Transfer:
             if (dots >= 172) {
                 dots -= 172;
                 currentMode = PPUMode::HBlank;
@@ -257,7 +256,7 @@ void PPU::step(int cycles) {
             }
             break;
 
-        case PPUMode::HBlank: // Modo 0
+        case PPUMode::HBlank:
             if (dots >= 204) {
                 dots -= 204;
                 ly++;
@@ -272,7 +271,7 @@ void PPU::step(int cycles) {
             }
             break;
 
-        case PPUMode::VBlank: // Modo 1
+        case PPUMode::VBlank:
             if (dots >= 456) {
                 dots -= 456;
                 ly++;
@@ -285,7 +284,6 @@ void PPU::step(int cycles) {
             break;
     }
 
-    // Actualizamos de forma segura los bits 0 y 1 del STAT con el modo actual
     setMode(static_cast<Byte> (currentMode));
     updateStatInterrupt();
 }
@@ -321,7 +319,7 @@ void PPU::write(Word address, Byte value) {
             bool isOn = (value & 0x80) != 0;
 
             if (!wasOn && isOn) {
-                dots = 0;
+                dots = 4;
                 ly = 0;
                 currentMode = PPUMode::OAM;
                 setMode(static_cast<Byte>(currentMode));
@@ -341,12 +339,12 @@ void PPU::write(Word address, Byte value) {
             break;
         case 0xFF42: scy = value; break;
         case 0xFF43: scx = value; break;
-        case 0xFF44: break; // LY es Read-Only, no se puede escribir
+        case 0xFF44: break;
         case 0xFF45: 
             lyc = value; 
             updateStatInterrupt();
             break;
-        case 0xFF46: dma = value; break; // DMA manejado en bus.cpp
+        case 0xFF46: dma = value; break;
         case 0xFF47: bgp = value; break;
         case 0xFF48: obp0 = value; break;
         case 0xFF49: obp1 = value; break;
@@ -363,7 +361,7 @@ void PPU::updateStatInterrupt() {
     }
 
     bool currentStatLine = false;
-    if ((stat & 0x40) && (stat & 0x04)) currentStatLine = true; // LY==LYC
+    if ((stat & 0x40) && (stat & 0x04)) currentStatLine = true;
     if ((stat & 0x20) && currentMode == PPUMode::OAM) currentStatLine = true;
     if ((stat & 0x10) && currentMode == PPUMode::VBlank) currentStatLine = true;
     if ((stat & 0x08) && currentMode == PPUMode::HBlank) currentStatLine = true;
@@ -374,14 +372,58 @@ void PPU::updateStatInterrupt() {
     prevStatLine = currentStatLine;
 }
 
-void PPU::triggerOamBug(Word address) {
-    if (currentMode == PPUMode::OAM && dots < 76 && address >= 0xFE00 && address <= 0xFEFF) {
-        corruptOAM();
+void PPU::triggerOamBug(Word address, int offset, OamBugPattern pattern) {
+    if (address < 0xFE00 || address > 0xFEFF) return; 
+
+    bool isLcdOn = (lcdc & 0x80) != 0;
+    if (!isLcdOn) return;
+    int active_dots = dots - offset;
+    
+    if (ly >= 144) return; 
+    if (active_dots < 0 || active_dots >= 80) return; 
+    
+    int row = active_dots / 4; 
+    if (row <= 0 || row >= 20) return; 
+    
+    auto readWord = [&](int r, int wordIdx) -> Word {
+        int base = r * 8 + wordIdx * 2;
+        return oam[base] | (oam[base + 1] << 8);
+    };
+    
+    auto writeWord = [&](int r, int wordIdx, Word val) {
+        int base = r * 8 + wordIdx * 2;
+        oam[base] = val & 0xFF;
+        oam[base + 1] = val >> 8;
+    };
+
+    Word a = readWord(row, 0);
+    Word b = readWord(row - 1, 0);
+    Word c = readWord(row - 1, 2);
+    Word new_a = 0;
+
+    if (pattern == OamBugPattern::WRITE) {
+        new_a = ((a ^ c) & (b ^ c)) ^ c;
+    } else {
+        new_a = b | (a & c);
     }
+
+    writeWord(row, 0, new_a);
+    writeWord(row, 1, readWord(row - 1, 1));
+    writeWord(row, 2, c); 
+    writeWord(row, 3, readWord(row - 1, 3));
 }
 
-void PPU::corruptOAM() {
-    int row = dots / 4;
+/*// PPU.cpp o Bus.cpp
+void PPU::triggerOamBug(Word address) { // <-- ¡Adiós offset!
+    // Si no estamos en Modo 2 (OAM Search) o la LCD está apagada, no hay bug.
+    if (currentMode != PPUMode::OAM || !(lcdc & 0x80)) return;
+    
+    // Si la dirección de 16 bits no está en OAM, no hay cruce de cables.
+    if (address < 0xFE00 || address > 0xFEFF) return;
+
+    // Aquí `dots` ya es exacto, porque la CPU lo sincronizó con tick()
+    int row = dots / 4; 
+    
     if (row < 0 || row >= 20) return;
     int base = row * 8;
 
@@ -390,12 +432,12 @@ void PPU::corruptOAM() {
     Byte b2 = oam[base + 2];
     Byte b3 = oam[base + 3];
 
-    oam[base + 0] = b0;
-    oam[base + 1] = b1;
+    oam[base + 0] = b0; 
+    oam[base + 1] = b1; 
     oam[base + 2] = b0;
     oam[base + 3] = b1;
     oam[base + 4] = b2;
     oam[base + 5] = b3;
     oam[base + 6] = b0;
     oam[base + 7] = b1;
-}
+}*/

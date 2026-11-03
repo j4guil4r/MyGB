@@ -61,9 +61,15 @@ public:
         Transfer = 3
     };
 
+    enum class OamBugPattern {
+        COMPLEX,
+        //INC_DEC,
+        READ,   // Para POP y LD A, [HLI]
+        WRITE   // Para INC/DEC rr y PUSH
+    };
     PPUMode currentMode = PPUMode::OAM;
 
-    void triggerOamBug(Word address);
+    void triggerOamBug(Word address, int offset, OamBugPattern patt);
 private:
     void setMode(int mode); // Helper para cambiar los bits 0 y 1 del registro STAT
     void drawScanline();
@@ -78,6 +84,4 @@ private:
     bool prevStatLine = false;
     
     int turnOnDelay = 0;
-
-    void corruptOAM();
 };

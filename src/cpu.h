@@ -61,6 +61,7 @@ public:
         else   F &= ~f;
     }
     void handleInterrupts();
+    Word addressBus = 0x0000;
 private:
     Bus& bus;
 
@@ -77,6 +78,7 @@ private:
     Byte fetchByte(); // Lee byte (8-bits) en PC y hace PC++
     Word fetchWord(); // Lee 2 bytes (16-bits) en PC y hace PC+=2
     void tick();
+    void tick16(Word addr);
     Byte read(Word address);
     void write(Word address, Byte value);
 

@@ -557,9 +557,8 @@ void CPU::step() {
     Byte opcode = fetchByte();
 
     // Decode & Execute
-    Instruction inst = instructions[opcode];
-    
-    (this->*inst.operate)();   
+    Instruction& inst = instructions[opcode];
+    (this->*inst.operate)();
 }
 
 void CPU::reset() {
@@ -606,17 +605,11 @@ void CPU::add(Byte value) {
 }
 
 void CPU::inc(Byte& reg) {
-    // Antes de sumar, miramos el Half Carry
-    // Si los 4 bits bajos son F (15), al sumar 1 habrá desborde al bit 4
     setFlag(F_H, (reg & 0x0F) == 0x0F);
-
-    // Sumamos
     reg++;
 
-    // Flags restantes
     setFlag(F_Z, reg == 0);
     setFlag(F_N, false);
-    // INC no toca el Flag C
 }
 
 void CPU::dec(Byte& reg) {
@@ -661,33 +654,32 @@ void CPU::sub(Byte value) {
 }
 
 void CPU::pushStack(Word value) {
-    Word old;
-    tick();
-    old = SP;
+    tick(); // Retraso interno
+    
+    Word old = SP; // <-- TIENE que ser el valor original
     SP--;
-    bus.ppu.triggerOamBug(old);
     write(SP, (value >> 8) & 0xFF);
-
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::WRITE); 
+    
     old = SP;
     SP--;
-    bus.ppu.triggerOamBug(old);
     write(SP, value & 0xFF);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::WRITE); 
 }
 
 Word CPU::popStack() {
-    Word old;
+    Word old = SP;
     Byte lo = read(SP);
-    old = SP;
     SP++;
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
+    
+    old = SP;
     Byte hi = read(SP);
-    old = SP;
     SP++;
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 
     return (hi << 8) | lo;
 }
-
 void CPU::rl(Byte& reg) {
     // 1. Guardamos el bit 7 actual (será el nuevo Carry)
     bool isCarry = (reg & 0x80) != 0;
@@ -932,6 +924,17 @@ void CPU::addHL(Word value) {
 }
 
 void CPU::handleInterrupts() {
+    if (bus.ppu.requestVBlankInterrupt) {
+        Byte currentIF = bus.read(0xFF0F);
+        bus.write(0xFF0F, currentIF | 0x01); 
+        bus.ppu.requestVBlankInterrupt = false; 
+    }
+
+    if (bus.ppu.requestStatInterrupt) {
+        Byte currentIF = bus.read(0xFF0F);
+        bus.write(0xFF0F, currentIF | 0x02); 
+        bus.ppu.requestStatInterrupt = false;
+    }
     // Leemos IE (Enabled) e IF (Request) desde el Bus
     Byte IE = bus.read(0xFFFF);
     Byte IF = bus.read(0xFF0F);
@@ -1015,8 +1018,8 @@ void CPU::OP_LD_BC_A()   { write(getBC(), A);}
 void CPU::OP_INC_BC()    {
     tick();
     Word old = getBC();
-    setBC(getBC() + 1);
-    bus.ppu.triggerOamBug(old);
+    setBC(old + 1);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_B()     { inc(B); }
 void CPU::OP_DEC_B()     { dec(B); }
@@ -1032,8 +1035,8 @@ void CPU::OP_LD_A_BC()   { A = read(getBC()); }
 void CPU::OP_DEC_BC()    { 
     tick();
     Word old = getBC();
-    setBC(getBC() - 1);
-    bus.ppu.triggerOamBug(old);
+    setBC(old - 1);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_C()     { inc(C); }
 void CPU::OP_DEC_C()     { dec(C); }
@@ -1053,8 +1056,8 @@ void CPU::OP_LD_DE_A()   { write(getDE(), A); }
 void CPU::OP_INC_DE()    { 
     tick();
     Word old = getDE();
-    setDE(getDE() + 1);
-    bus.ppu.triggerOamBug(old);
+    setDE(old + 1);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_D()     { inc(D); }
 void CPU::OP_DEC_D()     { dec(D); }
@@ -1074,7 +1077,7 @@ void CPU::OP_DEC_DE()    {
     tick();
     Word old = getDE();
     setDE(old - 1);
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_E()     { inc(E); }
 void CPU::OP_DEC_E()     { dec(E); }
@@ -1097,16 +1100,16 @@ void CPU::OP_JR_NZ_r8()  {
 }
 void CPU::OP_LD_HL_d16() { setHL(fetchWord()); }
 void CPU::OP_LDI_HL_A() {
-    write(getHL(), A);
     Word old = getHL();
+    write(old, A);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::WRITE);
     setHL(old + 1);
-    bus.ppu.triggerOamBug(old);
 }
 void CPU::OP_INC_HL()    {
     tick();
     Word old = getHL();
-    setHL(old + 1);
-    bus.ppu.triggerOamBug(old);
+    setHL(getHL() + 1);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_H()     { inc(H); }
 void CPU::OP_DEC_H()     { dec(H); }
@@ -1122,17 +1125,17 @@ void CPU::OP_JR_Z_r8() {
 }
 void CPU::OP_ADD_HL_HL() { tick(); addHL(getHL()); }
 void CPU::OP_LDI_A_HL()  {
-    A = read(getHL());
     Word old = getHL();
+    A = read(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
     setHL(old + 1);
-    bus.ppu.triggerOamBug(old);
     
 }
 void CPU::OP_DEC_HL()    {
     tick();
     Word old = getHL();
     setHL(old - 1);
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_L()     { inc(L);}
 void CPU::OP_DEC_L()     { dec(L); }
@@ -1156,16 +1159,16 @@ void CPU::OP_JR_NC_r8() {
 }
 void CPU::OP_LD_SP_d16() { SP = fetchWord(); }
 void CPU::OP_LDD_HL_A() {
-    write(getHL(), A);
     Word old = getHL();
+    write(getHL(), A);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::WRITE);
     setHL(old - 1);
-    bus.ppu.triggerOamBug(old);
 }
 void CPU::OP_INC_SP()    {
     tick();
     Word old = SP;
     SP++;
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_aHL() {
     Byte val = read(getHL());
@@ -1197,16 +1200,16 @@ void CPU::OP_JR_C_r8() {
 }
 void CPU::OP_ADD_HL_SP() { tick(); addHL(SP); }
 void CPU::OP_LDD_A_HL() {
-    A = read(getHL());
     Word old = getHL();
+    A = read(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
     setHL(old - 1);
-    bus.ppu.triggerOamBug(old);
 }
 void CPU::OP_DEC_SP()    {
     tick();
     Word old = SP;
     SP--;
-    bus.ppu.triggerOamBug(old);
+    bus.ppu.triggerOamBug(old, 4, PPU::OamBugPattern::READ);
 }
 void CPU::OP_INC_A()     { inc(A); }
 void CPU::OP_DEC_A()     { dec(A); }

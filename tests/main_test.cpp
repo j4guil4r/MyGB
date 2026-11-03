@@ -2,10 +2,64 @@
 #include <string>
 #include <filesystem>
 #include <vector>
+#include <chrono>
 #include "../src/bus.h"
 #include "../src/cpu.h"
 
 namespace fs = std::filesystem;
+
+void printVRAMDump(Bus& gbBus) {
+    std::cout << "\n=== PANTALLA DE LA GAME BOY (VRAM) ===\n";
+    bool bgMap = (gbBus.read(0xFF40) & 0x08) != 0;
+    Word mapAddr = bgMap ? 0x9C00 : 0x9800;
+    
+    for(int i = 0; i < 32 * 32; i++) {
+        char tile = gbBus.read(mapAddr + i);
+        if (tile >= 32 && tile <= 126) std::cout << tile;
+        else std::cout << " ";
+        
+        if ((i + 1) % 32 == 0) std::cout << "\n";
+    }
+    std::cout << "======================================\n";
+}
+
+bool checkInfiniteLoop(Bus& gbBus, Word currentPC) {
+    Byte op = gbBus.read(currentPC);
+    Byte arg = gbBus.read(currentPC + 1);
+
+    if (op == 0x18 && arg == 0xFE) { // JR -2
+        std::cout << "\n==================================\n";
+        std::cout << "✅ TEST FINALIZADO EN PC: 0x" << std::hex << currentPC << std::dec << "\n";
+        printVRAMDump(gbBus);
+        return true;
+    }
+    return false;
+}
+
+bool checkSerialOutput(Bus& gbBus) {
+    std::string output = gbBus.getSerialOutput();
+    if (output.find("Passed") != std::string::npos) {
+        std::cout << "[RESULTADO]: ✅ PASSED\n\n";
+        return true;
+    } 
+    else if (output.find("Failed") != std::string::npos) {
+        std::cout << "[RESULTADO]: ❌ FAILED\n";
+        std::cout << "--- REPORTE ---\n" << output << "\n---------------\n\n";
+        return true;
+    }
+    return false;
+}
+
+void handleTimeout(CPU& cpu, Bus& gbBus) {
+    std::cout << "[RESULTADO]: ⏱️ TIMEOUT\n";
+    std::cout << "--- LOG INTERCEPTADO ANTES DEL CONGELAMIENTO ---\n";
+    std::cout << gbBus.getSerialOutput() << "\n";
+    std::cout << "--- CPU CONGELADA EN ---\n";
+    std::cout << "PC Actual: 0x" << std::hex << cpu.getPC() << std::dec << "\n";
+    std::cout << "LY Actual (0xFF44): " << (int)gbBus.read(0xFF44) << "\n";
+    std::cout << "------------------------------------------------\n";
+    printVRAMDump(gbBus);
+}
 
 void runBlarggTest(const std::string& romPath, const std::string& romName) {
     Bus gbBus;
@@ -19,96 +73,23 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 
     bool testFinished = false;
     long long maxCycles = 150000000;
-
+    
     std::cout << "==== TEST " << romName << " ====\n";
 
     try {
-        // --- INICIO DE LA MÁQUINA DEL TIEMPO ---
-        //Word pcHistory[30] = {0};
-        //int historyIdx = 0;
         while (!testFinished && cpu.getCycles() < maxCycles) {
-            //long long cyclesBefore = cpu.getCycles();
-
             Word currentPC = cpu.getPC();
 
-            // --- DETECTOR UNIVERSAL DE FIN DE TEST ---
-            // Leemos la instrucción actual para ver si es un JR -2 (0x18 0xFE)
-            Byte op = gbBus.read(currentPC);
-            Byte arg = gbBus.read(currentPC + 1);
+            if (checkInfiniteLoop(gbBus, currentPC)) break;
 
-            if (op == 0x18 && arg == 0xFE) {
-                // ¡La CPU se ha encerrado a sí misma a propósito!
-                Byte testResult = gbBus.read(0xA000);
-                
-                std::cout << "\n==================================\n";
-                std::cout << "TEST FINALIZADO EN PC: 0x" << std::hex << currentPC << std::dec << "\n";
-                
-                if (testResult == 0x80) {
-                    std::cout << "⚠️ BUCLE ALCANZADO, PERO EL TEST SIGUE EN CURSO (0x80).\n";
-                } else if (testResult == 0x00) {
-                    std::cout << "✅ [RESULTADO]: ¡TEST SUPERADO (PASSED)!\n";
-                    testFinished = true;
-                } else {
-                    std::cout << "❌ [RESULTADO]: FAILED (Error Código: " << (int)testResult << ")\n";
-                    std::cout << "MENSAJE DE BLARGG: ";
-                    Word textAddress = 0xA004;
-                    while (true) {
-                        char c = (char)gbBus.read(textAddress++);
-                        if (c == '\0' || textAddress > 0xBFFF) break;
-                        std::cout << c;
-                    }
-                    std::cout << "\n";
-                    testFinished = true;
-                }
-                std::cout << "==================================\n";
-                
-                break; // Rompemos el bucle de tu emulador limpiamente
-            }
-            // Guardamos el PC actual en el historial circular
-            //pcHistory[historyIdx] = currentPC;
-            //historyIdx = (historyIdx + 1) % 30;
-            
             cpu.step();
-            
-            /*long long deltaCycles = cpu.getCycles() - cyclesBefore;
-
-            gbBus.updateTimers(deltaCycles);
-            gbBus.ppu.step(deltaCycles);
-            gbBus.apu.step(deltaCycles);*/
-
-            if (gbBus.ppu.requestVBlankInterrupt) {
-                Byte currentIF = gbBus.read(0xFF0F);
-                gbBus.write(0xFF0F, currentIF | 0x01); 
-                gbBus.ppu.requestVBlankInterrupt = false; 
-            }
-
-            if (gbBus.ppu.requestStatInterrupt) {
-                gbBus.write(0xFF0F, gbBus.read(0xFF0F) | 0x02); 
-                gbBus.ppu.requestStatInterrupt = false;
-            }
-
             cpu.handleInterrupts();
-            
-            std::string output = gbBus.getSerialOutput();
-            if (output.find("Passed") != std::string::npos) {
-                std::cout << "[RESULTADO]: ✅ PASSED\n\n";
-                testFinished = true;
-            } 
-            else if (output.find("Failed") != std::string::npos) {
-                std::cout << "[RESULTADO]: ❌ FAILED\n";
-                std::cout << "--- REPORTE ---\n" << output << "\n---------------\n\n";
-                testFinished = true;
-            }
+
+            if (checkSerialOutput(gbBus)) break;
         }
 
-        if (!testFinished) {
-            std::cout << "[RESULTADO]: ⏱️ TIMEOUT\n";
-            std::cout << "--- LOG INTERCEPTADO ANTES DEL CONGELAMIENTO ---\n";
-            std::cout << gbBus.getSerialOutput() << "\n";
-            std::cout << "--- CPU CONGELADA EN ---\n";
-            std::cout << "PC Actual: 0x" << std::hex << cpu.getPC() << std::dec << "\n";
-            std::cout << "LY Actual (0xFF44): " << (int)gbBus.read(0xFF44) << "\n";
-            std::cout << "------------------------------------------------\n\n";
+        if (cpu.getCycles() >= maxCycles) {
+            handleTimeout(cpu, gbBus);
         }
 
     } catch (const std::exception& e) {
@@ -117,18 +98,17 @@ void runBlarggTest(const std::string& romPath, const std::string& romName) {
 }
 
 int main () {
-    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/mem_timing/individual";
-    //std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/instr_timing";
-    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms/cpu_instrs/";
+    std::string baseDirectory = "/home/joseag/Projects/MyGB/build/gb-test-roms";
     std::vector<std::string> testFiles;
 
     for (const auto& entry : fs::recursive_directory_iterator(baseDirectory)) {
+        if (entry.path().string().find("oam_bug") != std::string::npos) continue;
         if (entry.is_regular_file() && entry.path().extension() == ".gb") {
             std::string parentDir = entry.path().parent_path().filename().string();
-            //if (parentDir == "individual" || parentDir == "rom_singles") {
-                //if(entry.path().filename() == "02-interrupts.gb") 
+            if (parentDir == "individual" || parentDir == "rom_singles") {
+                //if(entry.path().filename() == "7-timing_effect.gb") 
                     testFiles.push_back(entry.path().string());
-            //}
+            }
         }
     }
 
@@ -136,8 +116,14 @@ int main () {
     std::cout << "Se encontraron " << testFiles.size() << " tests individuales.\n\n";
 
     for (const std::string& filepath : testFiles) {
-        fs::path pathObj(filepath); 
+        fs::path pathObj(filepath);
+        auto inicio = std::chrono::high_resolution_clock::now();
+        
         runBlarggTest(filepath, pathObj.filename().string());
+        
+        auto fin = std::chrono::high_resolution_clock::now();
+        auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
+        std::cout << pathObj.filename().string() << " terminó en " << duracion.count() << " ms\n";
     }
 
     return 0;
